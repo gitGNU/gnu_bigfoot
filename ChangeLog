@@ -1,3 +1,12 @@
+2004-03-29  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.sty: Stop relying on \pp@label.
+
+	* perpage.sty: New command \AddAbsoluteCounter, \pp@label and
+	\pp@page are no longer exported, kerns are transported to after
+	the whatsit to support [multiple]{footmisc}, per page resetting
+	is done for each counter separately (doh!).
+
 2004-03-25  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.sty (\MFL@mpreinsert): Add an appropriate \marks
