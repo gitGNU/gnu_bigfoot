@@ -1,3 +1,7 @@
+2005-03-16  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Basically fix a few mismatched braces.
+
 2005-03-14  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Lots of additional debug code too numerous to

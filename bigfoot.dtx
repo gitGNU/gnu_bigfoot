@@ -97,8 +97,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/03/14 15:29:28 $
-  Version \FN@next $Revision: 1.5 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/03/15 23:18:29 $
+  Version \FN@next $Revision: 1.6 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -717,7 +717,7 @@
       \let\@thefnmark\@empty
       \FN@specific\FN@masterinsert\@makefnvtext{#1}%
       \@makefnendbox
-      \@finalstrut\strutbox}}}
+      \@finalstrut\strutbox}}
 \fi
 
 \def\hfootfraction{0.9}
@@ -761,9 +761,9 @@
     \ifdim\FN@vfound>\dimexpr\vtypefraction\p@*\FN@found\relax
       \ifdim\dimexpr \ht\z@+\dp\z@>\hfootfraction\dimen@ii
         \global\setbox\FN@tempbox\box\tw@
-        \setbox\z@\@makefnvbox{%
+        \setbox\z@\@makefnvbox{\let\@makefnbreak\break
           \global\setbox\FN@tempbox
-          \hbox{\let\@makefnbreak\break
+          \hbox{%
             \unhbox\FN@tempbox\setbox\z@\lastbox\FN@removehboxes}%
           \unhbox\FN@tempbox}%
       \fi
@@ -1670,7 +1670,7 @@
 %<trace>      \tracingonline=\@ne\showbox\tw@
 %<trace>   \fi
 %<trace> \fi
-%<trace> }%
+    }%
     \unvbox\tw@
     \unvbox\z@
     \FN@nest@iterate\FN@clearcache
