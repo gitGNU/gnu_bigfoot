@@ -1,3 +1,9 @@
+2004-03-25  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.sty (\MFL@mpreinsert): Add an appropriate \marks
+	command after reinserting minipage material to make subordinate
+	footnotes come out.
+
 2004-03-22  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.sty: Rely on perpage.sty for a general sorted counter
