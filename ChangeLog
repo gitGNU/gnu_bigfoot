@@ -5,6 +5,8 @@
 	Fix calculation of sort criterion.
 	Adjust listdepth and itemdepth to zero within footnotes.
 	Fix restoration of \reset@color and ilk.
+	(\MFL@mpreinsert, \MFL@minipage, \MFL@removevboxes): restructure
+	to deal better with recursive data structures.
 
 2004-03-18  David Kastrup  <dak@gnu.org>
 
