@@ -1,7 +1,7 @@
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/16 06:46:26 $
-  Version \FN@next $Revision: 1.7 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/18 21:37:12 $
+  Version \FN@next $Revision: 1.8 $]%}
 
 % Make sure we get reasonable behavior also in the absence of perpage.sty
 \ifx\@undefined\pp@label \def\pp@label{1} \fi
@@ -316,7 +316,7 @@
   \dimen@ii\dimexpr\p@\FN@fuzzyeval{#3}{#4}{\ht\z@+\dp\z@}\relax
   \dimen@\dimexpr\FN@fuzzyor\dimen@\dimen@ii
   \count@\numexpr((#6)-(#5))*\dimen@/\p@+(#5)\relax
-  \xdef\FN@vfound{\the\dimexpr\FN@vfound+\dimen@}
+  \xdef\FN@vfound{\the\dimexpr\FN@vfound+\dimen@}%
   \ifnum\count@>-\@M
     \penalty\count@
     \hskip\glueexpr -\parfillskip+1em minus 0.5em\relax
@@ -505,8 +505,6 @@
       \let\MFL@minipage\relax
       \let\MFL@endminipage\relax
       \normalfont\footnotesize
-      \expandafter\xdef\csname FN@ht\number#2\endcsname{\the\footnotesep}%
-      \expandafter\xdef\csname FN@dp\number#2\endcsname{\the\dp\strutbox}%
       \interlinepenalty\interfootnotelinepenalty
       \hsize\MFL@columnwidth \@parboxrestore
       \protected@edef\@currentlabel{\@thefnmark}%
@@ -516,6 +514,8 @@
       \normalcolor
       \FN@specific{#2}\@makefntext
       \iffalse\fi
+      \expandafter\xdef\csname FN@ht\number#2\endcsname{\the\footnotesep}%
+      \expandafter\xdef\csname FN@dp\number#2\endcsname{\the\dp\strutbox}%
       \marks\FN@master{\FN@masterslot}%
       \marks\FN@slave{\number\FN@id}%
       \nobreak
