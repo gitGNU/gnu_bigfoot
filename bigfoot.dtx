@@ -60,6 +60,7 @@
 %    \begin{macrocode}
 %<driver> \documentclass{ltxdoc}
 %<driver> \usepackage{bigfoot}
+%<driver> \usepackage{tabularx}
 %<driver> \usepackage{hyperref}
 %    \end{macrocode}
 % After loading the packages, we declare two footnote blocks.  One is
@@ -96,8 +97,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/03/11 00:45:33 $
-  Version \FN@next $Revision: 1.4 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/03/14 15:29:28 $
+  Version \FN@next $Revision: 1.5 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -134,14 +135,15 @@
 %   1&break decisions\\
 %   2&horizontal box building\\
 %   4&allocation stuff\\
-%   8&output routine stuff
+%   8&output routine stuff\\
+%  16&retained and kept boxes
 % \end{tabular}
 %    \begin{macrocode}
 %<trace>\DeclareOption{trace}{%
 %<trace>\DeclareOption*{\ftflags=\CurrentOption\relax}%
 %<trace>  \AtEndOfPackage{\RequirePackage{trace}\relax
 %<trace>  \errorcontextlines\maxdimen
-%<trace>  \showboxdepth3
+%<trace>  \showboxdepth4
 %<trace>  \showboxbreadth100
 %<trace>  \tracingonline=\@ne}%
 %<trace>}
@@ -517,6 +519,7 @@
     \iffalse{\fi\csname FN@stack@#1\endcsname}}\fi}
 %    \end{macrocode}
 % \end{macro}
+%    \begin{macrocode}
 \def\FN@firstpop#1#2#3{\protected@xdef\@thefnmark{#2}%
   \let\@elt\relax
   \expandafter\protected@xdef\csname FN@stack@#1\endcsname{%
@@ -619,15 +622,30 @@
 %   This just completely voids a cache register.
 %    \begin{macrocode}
 \def\FN@clearcache#1#2{%
+%<trace>  \ifvoid#2\else \errmessage{Unused insertion: #2}%
+%<trace>  {\showboxbreadth400 \showboxdepth4 \tracingonline\@ne
+%<trace>  \showbox#2}\fi
   \global\setbox\FN@cache#2=\box\voidb@x}
 %    \end{macrocode}
 % \end{macro}
-% 
-% \begin{macrocode}
+%
+% \begin{macro}{\@makefnvtext}
+% This takes a sequence of horizontally typeset footnotes and typesets
+% them in a single block.  To get correct indentation, it breaks
+% before the first footnote and adjusts the clubpenalties to move them
+% to one line lower effectively.
+%    \begin{macrocode}
 \def\@makefnvtext#1{%
   \FN@specific\FN@masterinsert\@makefntext{%
+    \clubpenalties\tw@\@MM\clubpenalty
     \vadjust{\nobreak\vskip-\baselineskip}\nobreak\hfill\break#1}}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\@preparefnhtext}
+% This creates appropriate skips to be put before the horizontal
+% material to make the indentation correct with a breakpoint before
+% the footnote as well as when in run-in text.
+%    \begin{macrocode}
 \ifx\@preparefnhtext\@undefined
 \def\@preparefnhtext{{%
   \setbox\z@\hbox{\FN@specific\FN@masterinsert\@makefntext{%
@@ -648,6 +666,7 @@
   \FN@tempinfo}
 \fi
 %    \end{macrocode}
+% \end{macro}
 % Now we have in |\FN@tempinfo| the excess width of the label we
 % don't want to preserve when doing in-paragraph footnote setting.  A
 % sequence of glue before a label now has to consist of stuff that
@@ -671,28 +690,34 @@
 % first line is something we can't simulate, but again, it should
 % occur rarely.  When |\parshape| is active, |\hangindent| is ignored.
 %    \begin{macrocode}
+\def\@makefnstartbox{%
+  \reset@font\footnotesize
+  \hsize\MFL@columnwidth \@parboxrestore
+  \interlinepenalty\FN@specific\FN@masterinsert\interfootnotelinepenalty
+  \widowpenalty\FN@specific\FN@masterinsert\footnotewidowpenalty
+  \clubpenalty\FN@specific\FN@masterinsert\footnoteclubpenalty
+  \advance\linepenalty500\relax}
+
+\def\@makefnendbox{%
+  \widowpenalty\FN@specific\FN@masterinsert\finalfootnotewidowpenalty
+  \unskip}
+
+\newcount\footnotewidowpenalty
+\footnotewidowpenalty=250
+\newcount\footnoteclubpenalty
+\footnoteclubpenalty=250
+\newcount\finalfootnotewidowpenalty
+\finalfootnotewidowpenalty=4000
 
 \ifx\@makefnvbox\@undefined
-\def\@makefnvbox#1{\vbox{%
-      \reset@font\footnotesize
-      \interlinepenalty\FN@specific\FN@masterinsert\interfootnotelinepenalty
-      \widowpenalty\FN@specific\FN@masterinsert\footnotewidowpenalty
-      \clubpenalty\FN@specific\FN@masterinsert\footnoteclubpenalty
-      \hsize\MFL@columnwidth \@parboxrestore
+  \def\@makefnvbox#1{\vbox{%
+      \@makefnstartbox
       \noindent
       \rule\z@\footnotesep
-      \advance\linepenalty500
       \let\@thefnmark\@empty
       \FN@specific\FN@masterinsert\@makefnvtext{#1}%
-      \widowpenalty\FN@specific\FN@masterinsert\finalfootnotewidowpenalty
-      \unskip\@finalstrut\strutbox
-    }}%
-  \newcount\footnotewidowpenalty
-  \footnotewidowpenalty=250
-  \newcount\footnoteclubpenalty
-  \footnoteclubpenalty=250
-  \newcount\finalfootnotewidowpenalty
-  \finalfootnotewidowpenalty=4000
+      \@makefnendbox
+      \@finalstrut\strutbox}}}
 \fi
 
 \def\hfootfraction{0.9}
@@ -706,9 +731,8 @@
 %   have already set |\box\z@| to |\lastbox| before calling this
 %   routine (or, more likely, have already assembled and split the
 %   last box).  The last, not yet unpacked |\vbox| is left in
-%   |\box\z@| on return.  You have to take note of the depth of the
-%   originally last box before calling this routine, as the depth will
-%   not be reconstructed for the last box.
+%   |\box\z@| on return.  The original id of the last box of a block
+%   is properly transferred to it.
 %
 %   The last box might have come about by joining several horizontal
 %   boxes, so splitting it might separate footnotes.  We deal with
@@ -720,6 +744,7 @@
 \def\FN@assembleboxes{%
   \ifhbox\z@
     \dimen@\dp\z@
+%<trace> \MFL@checksinglebox\z@\z@{}{}%
     \dimen@ii\z@
     \setbox\tw@\box\voidb@x
     \loop \advance\dimen@ii\dimexpr\ht\z@+\dp\z@\relax
@@ -746,9 +771,11 @@
     \setbox\tw@\box\voidb@x
     \ht\z@\dimexpr \ht\z@+\dp\z@-\dimen@\relax
     \dp\z@\dimen@
+%<trace>  \MFL@checksinglebox\z@\z@{}{}%
   \else
-    \ifvbox\z@{%
-      \setbox\z@\lastbox
+    \ifvbox\z@
+%<trace>  \MFL@checksinglebox\z@\z@{}{}%
+      {\setbox\z@\lastbox
       \FN@assembleboxes\nointerlineskip\box\z@}%
     \fi
   \fi}
@@ -875,22 +902,26 @@
 % \begin{macro}{\FN@id}
 % \begin{macro}{\FN@master}
 % \begin{macro}{\FN@slave}
-% ^^A Is this still correct?
 %   Here is the deal with master and slave ids: each footnote has a
-%   unique master id.  This master id is also what is recorded in the
-%   mark \cmd{\FN@master} in the footnote box itself, and in the mark
-%   \cmd{\FN@slave} at the point of its mark.  At the point where a
-%   \cmd{\FN@master} mark is placed, a default \cmd{\FN@slave} mark is
-%   placed also with an id that is one less than the smallest id
-%   generated from a footnote that is a `descendent' of the current
-%   one.  This makes it possible to distinguish any split off
-%   subordinate footnotes.  It must be noted that this sentinel slave
-%   id will be the valid id of a completely unrelated footnote!  Since
-%   the value is only used for determining one end of an \emph{open}
-%   interval of excluded ids, this is no problem.  All subordinate
-%   footnotes are numbered sequentially in the order of
-%   \emph{completion}, so that any subordinate footnotes have lower
-%   ids than their master.
+%   unique master id.  This master id is larger by one than the last
+%   id of its subordinate footnotes.  It is recorded in the mark
+%   \cmd{\FN@master} in the footnote box at the start itself, although
+%   with an indirection through the \cmd{\FN@newslot} mechanism since
+%   the actual id can only become known after all subfootnotes have
+%   been typeset.  The same id is recorded in \cmd{\FN@slave} at the
+%   ultimate end of the footnote.
+%
+%   At the point where a \cmd{\FN@master} mark is placed, a default
+%   \cmd{\FN@slave} mark is placed also with an id that is one less
+%   than the smallest id generated from a footnote that is a
+%   `descendent' of the current one.  This makes it possible to
+%   distinguish any split off subordinate footnotes.  It must be noted
+%   that this sentinel slave id will be the valid id of a completely
+%   unrelated footnote!  Since the value is only used for determining
+%   one end of an \emph{open} interval of excluded ids, this is no
+%   problem.  All subordinate footnotes are numbered sequentially in
+%   the order of \emph{completion}, so that any subordinate footnotes
+%   have lower ids than their master.
 %    \begin{macrocode}
 \newcount\FN@id
 \FN@id\@ne
@@ -925,9 +956,7 @@
       \FN@@color@begingroup
       \let\MFL@minipage\relax
       \let\MFL@endminipage\relax
-      \normalfont\footnotesize
-      \interlinepenalty\interfootnotelinepenalty
-      \hsize\MFL@columnwidth \@parboxrestore
+      \@makefnstartbox
       \let\@listdepth\@mplistdepth \@mplistdepth\z@
       \@itemdepth\z@ \@enumdepth\z@
       \protected@edef\@currentlabel{\@thefnmark}%
@@ -1039,7 +1068,7 @@
   \expandafter\expandafter\expandafter
   \expandafter\expandafter\expandafter\expandafter
   \iffalse  \FN@specific\FN@masterinsert\@makefntext\fi
-  \unskip
+  \@makefnendbox
   \ifx\FN@boxtype\vbox\@finalstrut\strutbox\fi
   \FN@colorstackfinish
   \color@endgroup
@@ -1080,29 +1109,38 @@
 %<trace>\def\MFL@checkconsistency#1{{%
 %<trace>  \setbox\z@\vbox{\unvcopy#1%
 %<trace>    \MFL@checkconsistencyi{#1}}}}
-%<trace>
+%    \end{macrocode}
+% \begin{macro}{\MFL@checksinglebox}
+%   Check box~|#1| for consistency.  If it is bad, output box~|#2|.
+%   Execute |#3| if it was good, |#4| if it was bad.
+%    \begin{macrocode}
+%<trace>\def\MFL@checksinglebox#1#2#3#4{%
+%<trace>    \ifvoid#1\else
+%<trace>      \ifnum\z@<0\FN@slotget{\number\dp#1} %
+%<trace>        #3%
+%<trace>      \else \errmessage{Inconsistent box #2}%
+%<trace>         \showboxdepth4\showboxbreadth100
+%<trace>         \showbox#2\relax
+%<trace>         #4%
+%<trace>      \fi\fi}
+%    \end{macrocode}
+% \end{macro}
+%    \begin{macrocode}
 %<trace>\def\MFL@checkconsistencyi#1{%
-%<trace>    \unpenalty\unskip
+%<trace>    \unpenalty\unskip\unkern
 %<trace>    \setbox\z@\lastbox
-%<trace>    \ifvoid\z@\else
-%<trace>      \ifnum\z@<0\FN@slotget{\number\dp\z@} %
-%<trace>        {\MFL@checkconsistencyi{#1}}%
-%<trace>      \else \errmessage{Inconsistent box #1}%
-%<trace>         \showboxdepth3\showboxbreadth100
-%<trace>         \showbox#1\relax
-%<trace>      \fi
-%<trace>    \fi}
+%<trace>    \MFL@checksinglebox\z@{#1}{{\MFL@checkconsistencyi{#1}}}{}}
 %<trace>
 %<trace>\def\MFL@showall{{%
 %<trace>    \showboxbreadth=\maxdimen
-%<trace>    \showboxdepth=\tw@
+%<trace>    \showboxdepth=4
 %<trace>    \tracingonline=\@ne
 %<trace>    \FN@nest@iterate\MFL@showone}}
 %    \end{macrocode}
 % \begin{macro}{\FN@retaindelayed}
 %   This is a complex macro that removes all boxes from the current
-%   list that are not to be kept for the next page.  The last such box
-%   gets its id placed into \cmd{\FN@tempinfo} if that's still empty.
+%   list that are not to be kept for the next page.  It works on the
+%   material from the original insertions, not the cache boxes.
 %   The slot specified by \cmd{\count@} is not freed when encountered,
 %   all others are freed upon removing the box.  The last box is
 %   returned in box~0 if any is retained.  The vertical list might
@@ -1116,17 +1154,27 @@
     \ifvoid\z@\m@ne\fi \FN@config\z@
 %<trace>  \if\foottrace8\message{^^J\string\FN@retaindelayed:
 %<trace>     dropping box \FN@slotget{\dp\z@}}\fi
-    \ifx\FN@tempinfo\@empty
-      \xdef\FN@tempinfo{\FN@slotget{\number\dp\z@}}%
-    \fi
+%<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
+%<trace>     \tracingonline=\@ne\showbox\z@}\fi
+    \ifnum\FN@slotget{\dp\z@}>\FN@lowestslave
+       \xdef\FN@lowestslave{\FN@slotget{\dp\z@}}\fi
     \ifnum\dp\z@=\count@\else \FN@freeslot{\number\dp\z@}\fi
-%<trace> \ifnum\dp\z@<1sp \errmessage{Unidentified box}\fi
+%<trace> \ifnum\dp\z@<\@ne \errmessage{Unidentified box}\fi
     \FN@retaindelayed
   \or
 %<trace> \if\foottrace8\message{^^J\string\FN@retaindelayed:
 %<trace>    retaining box \FN@slotget{\dp\z@}}\fi
+%<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
+%<trace>     \tracingonline=\@ne\showbox\z@}\fi
     {\FN@retaindelayed \nointerlineskip \box\z@}%
   \else \unpenalty \setbox\z@\lastbox
+%<trace>  \ifnum\lastnodetype>\m@ne
+%<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
+%<trace>  \ifvoid\z@ \else
+%<trace>     \if\foottrace8\message{^^J\string\FN@retaindelayed:
+%<trace>        carrying split box \FN@slotget{\dp\z@}}\fi
+%<trace>     \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
+%<trace>        \tracingonline=\@ne\showbox\z@}\fi\fi
   \fi}
 %    \end{macrocode}
 % \end{macro}
@@ -1178,7 +1226,6 @@
        \fi}
 
 \let\MFL@processpara\MFL@processplain
-
 %    \end{macrocode}
 % \end{macro}
 % Ok, here is the bit about the caches: whenever we encounter a new
@@ -1223,10 +1270,11 @@
 % page in exchange for other material.
 %
 % At the current grouping level we empty out our current cache and
-% keep it for working purposes on the stack until we return (nobody
-% references it while we are working on it).  We always enter with an
-% overfull configuration, meaning that \cmd{\FN@vsize} is negative.
-% It is calculated with the current cache\slash config setting.
+% keep it for working purposes on the vertical list until we return
+% (nobody references it while we are working on it).  We always enter
+% with an overfull configuration, meaning that \cmd{\FN@vsize} is
+% negative.  It is calculated with the current cache\slash config
+% setting.
 %
 % There is a danger of overflow involved with that: if we keep a swept
 % complete configuration at each level of recursion, we need $O(n^2)$
@@ -1263,7 +1311,7 @@
 %       fuller on the current level, but we can make it even emptier,
 %       and let the next level fill it up again.
 % \end{enumerate}
-% ^^A
+%
 % In the current implementation, we just ignore the slight probability
 % that the optimum choice might lie with case~3.  We don't
 % recurse for making the page fuller again.  If we have an
@@ -1338,11 +1386,22 @@
   \box\FN@cache#2%
   \penalty\FN@cache#2}
 
+\def\FN@restoreboxes{\count@\lastpenalty \unpenalty
+  \ifnum\count@>\z@
+    \global\setbox\count@\lastbox
+    \expandafter\FN@restoreboxes
+  \fi}
+%    \end{macrocode}
+% \begin{macro}{\FN@removecheck}
+%   This returns |\@ne| if and only if the current slot master is strictly
+%   inside of the specified interval.
+%    \begin{macrocode}
 \def\FN@removecheck#1#2{%
   \ifnum#1<\FN@slotget{\number\dp\z@} %
   \ifnum#2>\FN@slotget{\number\dp\z@} %
     \@ne\fi\fi}
 %    \end{macrocode}
+% \end{macro}
 % Parameter recording merely records the relevant value of the
 % skip register and sets it to zero.  The purpose is to avoid changes
 % of the reserved page space when we collect additional material from
@@ -1470,12 +1529,16 @@
 %<trace> \if\foottrace8\message{receiving special penalty}\fi
       \global\setbox\@cclv\lastbox
       \unskip
+%<trace>  \ifnum\lastnodetype>\m@ne
+%<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
       \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
       \pagediscards
       \global\outputpenalty\@M
     \else
       \setbox\z@\lastbox
       \unskip
+%<trace>  \ifnum\lastnodetype>\m@ne
+%<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
       \dimen@\dimexpr\ht\z@+\ht\@cclv
       \global\setbox\@cclv\vbox{\unvbox\z@
         \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
@@ -1519,7 +1582,7 @@
     \count@\vbadness
     \vbadness\maxdimen
     \global\setbox\@cclv\vbox
-      spread\FN@vsize{\unvbox\@cclv\boxmaxdepth\boxmaxdepth}%
+      spread\FN@vsize{\unvbox\@cclv\boxmaxdepth\maxdepth}%
     \vbadness\count@
     \the\FN@output
     \FN@nest@iterate\FN@clearcache
@@ -1571,15 +1634,8 @@
         0\fi}%
     \let\@elt\FN@newlevel
     \@elt{}\FN@savebox\FN@nestlist\FN@mainsplitreturn
-    \def\next{0}%
-    \def\@elt#1#2{\ifnum\next<#1\relax
-      \def\next{#1}%
-      \fi}%
-    \FN@config
-    \ifnum\next>\z@
-      \global\let\FN@lowestslave\next
-    \fi
     \let\@elt\relax
+%<trace> \if\foottrace8{\showboxdepth4\showboxbreadth100\showbox\@cclv}\fi
     \global\setbox\FN@savebox\box\voidb@x
     \count@\vbadness
     \vbadness\maxdimen
@@ -1594,12 +1650,29 @@
       \MFL@removevboxes
       \boxmaxdepth\maxdepth}%
     \vbadness\count@
-    \ifvoid\FN@tempbox\else
-      \unvbox\FN@tempbox
-      \ifnum\outputpenalty<\@M\penalty\outputpenalty\fi
-    \fi
+    \setbox\z@
+      \ifvoid\FN@tempbox \box\FN@tempbox \else
+        \ifnum\outputpenalty<\@M
+          \vbox{\unvbox\FN@tempbox\penalty\outputpenalty}%
+        \else \box\FN@tempbox
+        \fi
+      \fi
     \let\@elt\relax
-    \the\FN@output
+%<trace> \if\foottrace8%
+%<trace>   \message{^^JOutput: config is \FN@config...}\fi
+    \setbox\tw@\vbox{\the\FN@output
+%<trace> \if\foottrace8%
+%<trace>   \ifnum\lastnodetype=\m@ne
+%<trace>     \message{^^JOutput: end without carryover^^J}%
+%<trace>   \else
+%<trace>     \message{^^JOutput: end with carryover}}%
+%<trace>      {\showboxdepth5 \showboxbreadth400
+%<trace>      \tracingonline=\@ne\showbox\tw@
+%<trace>   \fi
+%<trace> \fi
+%<trace> }%
+    \unvbox\tw@
+    \unvbox\z@
     \FN@nest@iterate\FN@clearcache
   \fi}
 %    \end{macrocode}
@@ -1790,13 +1863,30 @@
 % found the best possible split.  What we \cmd{\unvbox} here, stays
 % dormant except for the last box.  When we collect configurations
 % from cache boxes, we don't collect anything from our current box
-% that is being assembled.  |\box\tw@| is used for collecting whatever
-% we split off from |\box\z@|, the last box in the insertion, at the
-% front.
+% that is being assembled.  So the whole action is confined within the
+% current list that will replace the cache box after splitting.  The
+% meaning of boxes on the various levels are:\par\noindent
+% \begin{tabularx}{\linewidth}{ll@{:\hskip\tabcolsep}X}
+%   0&box0&where stuff gets collected as tentative material to be
+%   unboxed with |\FN@removevboxes| once the insertion gets readied
+%   for shipout\\
+%   0&box2&the previous best split that was found\\\hline
+%   1&box0&the material that gets worked off, the tail of the split\\
+%   1&box2&where the current split is assigned\\
+%   1&box4&material that was discarded during the split and will
+%   be used to reconstitute the split if it is not taken
+% \end{tabularx}
+% The structure of 0/box2 is the head of the split, followed by
+% |\break| penalty, followed by the tail of the split, followed by
+% |\penalty\FN@tempbox|, followed by pairs of cache boxes and
+% penalties indicating their box number.  That way, the tail can get
+% restored immediately into |\FN@tempbox| when using
+% |\FN@restoreboxes|.
 %    \begin{macrocode}
     \global\setbox\count@\vbox\bgroup\unvbox\count@
       \edef\FN@bestconfig{\FN@entryconfig}%
       \edef\FN@bestvsize{-\the\maxdimen}%
+      \let\FN@splitcolors\@empty
       \setbox\tw@\box\voidb@x
       \setbox\z@\lastbox
 %    \end{macrocode}
@@ -1824,13 +1914,19 @@
         \edef\FN@masterslot{\number\dp\z@}%
         \edef\FN@masterid{\FN@slotget\FN@masterslot}%
       \fi
-      \nointerlineskip
+%    \end{macrocode}
+% Now we are building one tentative candidate for returning in
+% |\box\z@|.  It will get discarded in case that a better candidate
+% was already found before this box completes.
+%    \begin{macrocode}
+      \setbox\z@
       \vbox\bgroup
         \setbox4\box\voidb@x
         \ifnum\FN@currentinsertion=\FN@savebox
           \setbox\tw@\vsplit\z@ to\dimexpr\FN@myvsize-\splitmaxdepth\relax
         \else
           \loop
+            \let\FN@splitcolors\@empty
             \setbox\tw@\vsplit\z@ to\dimexpr\FN@myvsize-\splitmaxdepth\relax
           \ifnum0\splitbotmarks\FN@master=\FN@masterslot
           \else
@@ -1844,9 +1940,10 @@
 % Ok, now we have to check whether the subordinate configuration has
 % changed.
 %    \begin{macrocode}
-        \let\FN@splitcolors\@empty
         \edef\FN@slaveid{\splitbotmarks\FN@slave}%
         \ifx\FN@slaveid\@empty
+%<trace>  \ifnum\FN@currentinsertion=\FN@savebox\else
+%<trace>    \errmessage{Missing slaveid in \FN@currentinsertion}\fi
           \let\FN@slaveid\FN@lowestslave%
         \fi
         \FN@contribute@tw@
@@ -1857,17 +1954,19 @@
         \fi
 %    \end{macrocode}
 % At this point of time, we have \cmd{\FN@masterid} set properly for
-% our purposes.  \cmd{\FN@slaveid} is by necessity not empty.  If any
-% footnote has had its mark broken off, its id must be in the open
-% range between \cmd{\FN@slaveid} and \cmd{\FN@masterid}.  So a
-% nonempty value of \cmd{\FN@next} at this point of time indicates
-% that we have to cater for a different configuration rather than the
-% currently cached one.
+% our purposes.  It is to be used for returning any \emph{tail} part
+% of a box.  \cmd{\FN@slaveid} is by necessity not empty (as long as
+% we are not talking about the main vertical list).  If any footnote
+% has had its mark broken off, its id must be in the open range
+% between \cmd{\FN@slaveid} and \cmd{\FN@masterid}.  So a nonempty
+% value of \cmd{\FN@next} at this point of time indicates that we have
+% to cater for a different configuration rather than the currently
+% cached one.
 %    \begin{macrocode}
         \FN@splitfurther}
 %    \end{macrocode}
 % \end{macro}
-% Main label for reconsideration
+% \subsubsection{Main label for reconsideration}
 % We are after a split to size without configuration change, or a
 % split that caused a configuration change and was reverted for a slow
 % motion split.  So whatever we do now up to the next configuration
@@ -1938,7 +2037,13 @@
   \fi}
 %    \end{macrocode}
 % \begin{macro}{\FN@returnbest}
-%    This macro will return the current split or the previous best.
+%   This macro will return the current split or the previous best.
+%   Where the conditionals end at the end of the function, we have
+%   either a split box, which has its top part in |\box\z@| and its
+%   bottom part in |\box\FN@tempbox|, or we have just the top part in
+%   |\box\z@|.  At the time |\FN@returnbest| is called, we have a list
+%   being assembled in |\box\z@|.  All the ``best'' variables are
+%   defined in the outer level already.
 %    \begin{macrocode}
 \def\FN@returnbest{%
   \skip@\FN@bestvsize\relax
@@ -1973,52 +2078,21 @@
     \ifdim\skip@<\dimen@ \@ne \fi \tw@
   \or
 %    \end{macrocode}
-% We have an earlier contender.
+% This is variant one of two.  The previous champion is better.
 %    \begin{macrocode}
     \global\let\FN@config\FN@bestconfig
     \global\FN@vsize\FN@bestvsize
     \global\let\FN@badness\FN@bestbadness
     \egroup
 %    \end{macrocode}
-% Remove the currently typeset box from the list.
-%    \begin{macrocode}
-    \setbox\z@\lastbox
-%    \end{macrocode}
 % Restore the saved configuration.
 %    \begin{macrocode}
-    \nointerlineskip
-    \vbox{%
-      \unvbox\tw@
-      \loop
-        \count@\lastpenalty
-      \ifnum\count@>\z@
-        \unpenalty
-        \global\setbox\count@\lastbox
-      \repeat
-      \unkern
+    \setbox\z@\vbox{\unvbox\tw@ \FN@restoreboxes}%
+    \let\FN@splitcolors\FN@bestsplitcolors
+    \unvbox\z@
+    \setbox\z@\lastbox
 %    \end{macrocode}
-% Move the split-off box intended to be carried to the next page into
-% box~\cmd{\FN@tempbox}.
 %    \begin{macrocode}
-      \global\setbox\FN@tempbox\lastbox
-      \setbox\z@\lastbox
-      \ifvoid\z@
-        \unvbox\FN@tempbox
-      \else
-        \unvbox\z@
-        \ifx\FN@bestsplitcolors\@empty\else
-          \dimen@\dp\FN@tempbox
-%<trace>      \ifnum\z@<0\FN@slotget{\dimen@} %
-%<trace>      \else \errmessage{Inconsistent
-%<trace>        \string\dimen@=\number\dimen@}\fi
-          \global\setbox\FN@tempbox\vbox{%
-            \FN@coloraftersplit\FN@bestsplitcolors
-            \nointerlineskip\nobreak
-            \unvbox\FN@tempbox}%
-          \ht\FN@tempbox
-            \dimexpr\ht\FN@tempbox+\dp\FN@tempbox-\dimen@\relax
-          \dp\FN@tempbox\dimen@
-      \fi\fi}%
   \else
     \xdef\FN@badness{\number\numexpr\FN@badness+\FN@breakpenalty}%
     \global\advance\FN@vsize\dimexpr(\FN@myvsize
@@ -2029,22 +2103,46 @@
 % Now box~0 is the box we need to carry to the next page.  Prepare
 % the box into box~\cmd{\FN@tempbox}.
 %    \begin{macrocode}
-    \ifnum\FN@currentinsertion=\FN@savebox
-    \else
-      \ifvoid\z@\else
-        \setbox\z@\vbox{\marks\FN@master{\FN@masterslot}%
-          \marks\FN@slave{\FN@slaveid}%
-          \FN@coloraftersplit\FN@splitcolors
-          \nobreak
-          \unvbox\z@}%
-        \wd\z@\maxdimen
-        \ht\z@\dimexpr\ht\z@+\dp\z@-\FN@masterslot sp\relax
-        \dp\z@ \FN@masterslot sp\relax
-      \fi
-    \fi
-    \global\setbox\FN@tempbox\box\z@
-    \egroup
+     \global\setbox\FN@tempbox\box\z@
+     \egroup
   \fi
+% Ok, the box to be carried over is now in box~\cmd{\FN@tempbox}, the
+% box to be be left last in this insertion is in box~\cmd{\z@}.  We
+% now have to add color information and other stuff if a split
+% occured.  The color information needs to be added in the inner box,
+% and the corresponding color unwind gets recorded in the outer box.
+% All this is only necessary if we are in inner boxes: there is no
+% information we can usefully add to split parts of the vertical list.
+%    \begin{macrocode}
+  \ifnum\FN@currentinsertion=\FN@savebox
+  \else
+    \ifvoid\FN@tempbox
+    \else
+      \ifx\FN@splitcolors\@empty
+        \global\setbox\FN@tempbox\vbox{%
+          \marks\FN@master{\FN@masterslot}%
+          \marks\FN@slave{\FN@slaveid}%
+          \nobreak
+          \unvbox\FN@tempbox}%
+      \else
+        \setbox\z@\vbox{%
+          \unvbox\z@
+          \global\setbox\FN@tempbox\vbox{%
+            \marks\FN@master{\FN@masterslot}%
+            \marks\FN@slave{\FN@slaveid}%
+            \FN@coloraftersplit\FN@splitcolors
+            \nobreak
+            \unvbox\FN@tempbox}}%
+      \fi
+      \ht\FN@tempbox
+      \dimexpr\ht\FN@tempbox+\dp\FN@tempbox-\FN@masterslot sp\relax
+      \dp\FN@tempbox\FN@masterslot sp\relax
+      \wd\FN@tempbox\maxdimen
+    \fi
+    \ht\z@=\dimexpr\ht\z@+\dp\z@-\FN@masterslot sp\relax
+    \dp\z@=\FN@masterslot sp
+  \fi
+  \nointerlineskip \box\z@
 %    \end{macrocode}
 % If nothing is to be carried over, we just finish our assignment to
 % the cache box and return.
@@ -2055,19 +2153,14 @@
 % \cmd{\nobreak}, and subtract its size from the finished box.
 %    \begin{macrocode}
   \else
-    \FN@carriedegroup\FN@tempbox
+    \dimen@-\dimexpr\ht\FN@tempbox+\dp\FN@tempbox\relax
+    \nointerlineskip\box\FN@tempbox
+    \nobreak
+    \expandafter\egroup
+    \expandafter\ht\expandafter\count@\expandafter\dimexpr
+    \the\dimen@+\ht\count@\relax
   \fi
 }
-%    \end{macrocode}
-% \end{macro}
-% \begin{macro}{\FN@carriedegroup}
-%    \begin{macrocode}
-\def\FN@carriedegroup#1{\dimen@-\dimexpr\ht#1+\dp#1\relax
-  \nointerlineskip\box#1%
-  \nobreak
-  \expandafter\egroup
-  \expandafter\ht\expandafter\count@\expandafter\dimexpr
-  \the\dimen@+\ht\count@\relax}
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@addmaterial}
@@ -2088,7 +2181,7 @@
       \FN@recordbest
     \else
 %    \end{macrocode}
-% the split would result in a configuration change, so undo it and
+% The split would result in a configuration change, so undo it and
 % revert to slow motion
 %    \begin{macrocode}
       \FN@uncontribute@tw@
@@ -2176,30 +2269,28 @@
       \egroup
       \FN@tempinfo
       \let\FN@splitcolors\FN@bestsplitcolors
-      \setbox\z@\lastbox
 %    \end{macrocode}
 % Now all relevant info has been retrieved, and we collect the best
-% box info in box two.  We start with the current list.  Disassembling
-% \cmd{\FN@tempbox} first has the advantage that the case of box~4
-% being void does not need extra treatment.  |\copy\z@| retains the
-% value at the outer level.
+% box info in |\box\tw@|.  The structure of the information is as
+% follows: it starts with the current box in split form, first the
+% tail, then the start of the current split box.
+% This is then followed by a zero kern, and then by pairs of boxes and
+% penalties indicating the swept box.
 %    \begin{macrocode}
       \setbox\tw@\vbox{\unvcopy\FN@tempbox
         \setbox\tw@\lastbox \setbox4\lastbox
-        \nointerlineskip\copy\z@\nointerlineskip
-        \ifnum\FN@currentinsertion=\FN@savebox
-          \box\tw@
-        \else
-          \setbox\z@\vbox{\marks\FN@master{\FN@masterslot}%
-            \marks\FN@slave{\FN@slaveid}%
-            \nobreak
-            \unvbox\tw@}%
-          \wd\z@\maxdimen
-          \ht\z@\dimexpr\ht\z@+\dp\z@-\FN@masterslot sp\relax
-          \dp\z@ \FN@masterslot sp\relax
-          \box\z@
-        \fi
-        \kern\z@
+%<trace>  \ifnum\lastnodetype>\m@ne
+%<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
+%    \end{macrocode}
+% Now the list is empty, and we start building it up by starting with
+% the old box, protection, and the cut off stuff.  |\box4| is not
+% needed in here, it is discarded.  We don't need to place
+% master/slave marks here: the necessary information is available
+% outside in the \cmd{\FN@masterslot} and \cmd{\FN@slaveid} info and
+% gets attached afterwards.
+%    \begin{macrocode}
+        \nointerlineskip\copy\z@\break\nointerlineskip
+        \box\tw@\penalty\FN@tempbox\nointerlineskip
         \let\@elt\FN@cachesize
         \advance\FN@myvsize-\dimexpr
           (\FN@vsize-\glueshrink\FN@vsize)%
@@ -2213,8 +2304,12 @@
         \xdef\FN@tempinfo{\FN@myvsize=\the\FN@myvsize\relax}}%
       \FN@tempinfo
       \nointerlineskip
+      \setbox\z@
       \vbox\bgroup\unvbox\FN@tempbox \setbox\tw@\lastbox
-        \setbox4\lastbox \unvbox\z@
+        \setbox4\lastbox
+%<trace>  \ifnum\lastnodetype>\m@ne
+%<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
+        \unvbox\z@
         \setbox\z@\box\tw@
     \fi
     \loop
@@ -2294,7 +2389,10 @@
 %   number of which we place in \cmd{\count@}) and add its size back
 %   to \cmd{\FN@vsize}.
 %    \begin{macrocode}
-\def\FN@reconfig#1#2{\ifvoid#2\else
+\def\FN@reconfig#1#2{\ifvoid#2%
+%<trace> \ifvoid\FN@cache#2\else
+%<trace>    \errmessage{\FN@cache#2 should be void}\fi
+  \else
   \count@\FN@cache#2%
   \ifvoid\count@\else
     \global\advance\FN@vsize
@@ -2343,11 +2441,18 @@
     \ifvoid\z@\m@ne\fi \FN@config\z@
 %<trace>  \if\foottrace8\message{^^J\string\FN@retainkept:
 %<trace>     retaining box \FN@slotget{\dp\z@}}\fi
+%<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
+%<trace>     \tracingonline=\@ne\showbox\z@}\fi
     {\FN@retainkept \nointerlineskip \box\z@}%
   \or
 %<trace>  \if\foottrace8\message{^^J\string\FN@retainkept:
 %<trace>     dropping box \FN@slotget{\dp\z@}}\fi
+%<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
+%<trace>     \tracingonline=\@ne\showbox\z@}\fi
     \FN@retainkept
+%<trace>  \else
+%<trace>  \ifnum\lastnodetype>\m@ne
+%<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
   \fi}
 %    \end{macrocode}
 % \end{macro}
@@ -2390,8 +2495,7 @@
 %<installer> }
 %<installer> \endbatchfile
 %    \end{macrocode}
-% \end{document}
-%
+% \endinput
 % Local Variables:
 % mode: doctex
 % TeX-master: "bigfoot.drv"

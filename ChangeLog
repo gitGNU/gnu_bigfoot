@@ -1,10 +1,19 @@
+2005-03-14  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Lots of additional debug code too numerous to
+	mention.  Move around order of insertions and reinserted page
+	material, and start nested output routine in a fresh vbox.  Some
+	changes with regard to the calculation of \FN@lowestslave: now
+	only updated on successful shipout.  Make the various widow
+	penalties and stuff work in vertical mode footnotes.
+
 2005-03-11  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Add \ftflags tracing, remove \iffoottrace again.
 	When using the trace option, unknown options are interpreted as
 	added flags to track certain trace features.  Add lots of tracing
 	output and document some more stuff.  Also try working
-	\cmd{\FN@splitcolors} correctly.	
+	\cmd{\FN@splitcolors} correctly.
 
 2005-03-09  David Kastrup  <dak@gnu.org>
 
