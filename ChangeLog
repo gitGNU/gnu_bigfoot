@@ -1,3 +1,13 @@
+2005-03-09  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Add trace version of \FN@slotget that checks we are
+	not using already freed versions.  New penalties
+	\footnotewidowpenalty, \footnoteclubpenalty and
+	\finalfootnotewidowpenalty.
+	Various debug output additions.
+	Remove \Footnotemark \Footnotetext and \Footnote redefinitions:
+	those cause infinite loops.
+
 2004-11-12  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Still more reorganization and documentation.

@@ -96,8 +96,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/11/12 22:36:46 $
-  Version \FN@next $Revision: 1.2 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/03/09 14:22:06 $
+  Version \FN@next $Revision: 1.3 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -385,6 +385,15 @@
   \global\expandafter\xdef\csname FN@slot#1\endcsname}
 
 \def\FN@slotget#1{\csname FN@slot#1\endcsname}
+%<trace>\def\FN@slotget#1{%
+%<trace>  \expandafter\FN@slotgetii\expandafter
+%<trace>     \FN@slotfreelist\expandafter
+%<trace>     {\number\number#1}}
+%<trace>\def\FN@slotgetii#1#2{%
+%<trace>  \ifx#1\@empty \csname FN@slot#2\endcsname\else
+%<trace>    \ifnum#1=#2 \errmessage{Use after freed: #1}\else
+%<trace>       \expandafter\FN@slotgetii
+%<trace>         \csname FN@slot#1\endcsname{#2}\fi\fi}
 %    \end{macrocode}
 % \end{macro}
 % \end{macro}
@@ -620,15 +629,24 @@
 \ifx\@makefnvbox\@undefined
 \def\@makefnvbox#1{\vbox{%
       \reset@font\footnotesize
-      \interlinepenalty\interfootnotelinepenalty
+      \interlinepenalty\FN@specific\FN@masterinsert\interfootnotelinepenalty
+      \widowpenalty\FN@specific\FN@masterinsert\footnotewidowpenalty
+      \clubpenalty\FN@specific\FN@masterinsert\footnoteclubpenalty
       \hsize\MFL@columnwidth \@parboxrestore
       \noindent
       \rule\z@\footnotesep
       \advance\linepenalty500
       \let\@thefnmark\@empty
       \FN@specific\FN@masterinsert\@makefnvtext{#1}%
+      \widowpenalty\FN@specific\FN@masterinsert\finalfootnotewidowpenalty
       \unskip\@finalstrut\strutbox
-    }}
+    }}%
+  \newcount\footnotewidowpenalty
+  \footnotewidowpenalty=250
+  \newcount\footnoteclubpenalty
+  \footnoteclubpenalty=250
+  \newcount\finalfootnotewidowpenalty
+  \finalfootnotewidowpenalty=4000
 \fi
 
 \def\hfootfraction{0.9}
@@ -740,7 +758,9 @@
       \endgroup
       \nobreak\hskip\parfillskip
       \@makefnbreak
-    \else \endgroup
+    \else
+%<trace> \ifvbox\z@ \errmessage{Unexpected vbox.}\fi
+      \endgroup
       \xdef\FN@vfound{\z@}%
       \xdef\FN@found{\z@}%
     \fi
@@ -803,6 +823,7 @@
 %   ids than their master.
 %    \begin{macrocode}
 \newcount\FN@id
+\FN@id\@ne
 \newmarks\FN@master
 \newmarks\FN@slave
 %    \end{macrocode}
@@ -879,7 +900,7 @@
         \afterassignment\ignorespaces
         \expandafter\FN@fnotecommonii
       \else
-    \PackageError{bigfoot}{#2 forbidden in \FN@masterinsert.}
+    \PackageError{bigfoot}{#2 forbidden in \FN@masterinsert.}%
     {Higher-placed footnotes can't be anchored in inferior ones.^^J%
     I am not putting this text in a footnote.  History:%
 \FN@errorstack}%
@@ -979,7 +1000,23 @@
 \newbox\FN@insertions
 
 \def\MFL@showone#1#2{\message{Box #2:}\showbox#2%
-  \message{Cachebox #2:}\showbox\FN@cache#2}
+  \MFL@checkconsistency{#2}%
+  \message{Cachebox #2:}\showbox\FN@cache#2%
+  \MFL@checkconsistency{#2}}
+
+\def\MFL@checkconsistency#1{{%
+  \setbox\z@\vbox{\unvcopy#1%
+    \MFL@checkconsistencyi}}}
+
+\def\MFL@checkconsistencyi{%
+    \setbox\z@\lastbox
+    \ifvoid\z@
+      \ifnum\FN@slotget{\number\dp\z@}>\z@
+        {\MFL@checkconsistencyi}%
+      \else \errmessage{Inconsistent box}%
+      \fi
+    \fi}
+
 \def\MFL@showall{{%
     \showboxbreadth=\maxdimen
     \showboxdepth=\tw@
@@ -1005,6 +1042,7 @@
       \xdef\FN@tempinfo{\FN@slotget{\number\dp\z@}}%
     \fi
     \ifnum\dp\z@=\count@\else \FN@freeslot{\number\dp\z@}\fi
+%<trace> \ifnum\dp\z@<1sp \errmessage{Unidentified box}\fi
     \FN@retaindelayed
   \or  {\FN@retaindelayed \nointerlineskip \box\z@}%
   \else \unpenalty \setbox\z@\lastbox
@@ -1091,10 +1129,18 @@
 % of the best choice up to now: either we are returning an overfull
 % configuration and if it is not the best so far, the caller can
 % restore his better choice from his copy, or we are returning an
-% underfull configuration in which case the caller might still want
-% to improve upon it before returning to its caller in turn.  At the
-% current grouping level we empty out our current cache and keep it
-% for working purposes on the stack until we return (nobody
+% underfull configuration in which case the caller might still want to
+% improve upon it before returning to its caller in turn.  New: If we
+% return an underfull configuration, we also return an ``optimal
+% penalty estimate'' that gives the best break point penalty under the
+% assumption that additional stretchability is present on the page.
+%
+% The purpose of this is to offer the possibility of avoiding widows
+% and similar by moving more material in some footnotes to the next
+% page in exchange for other material.
+%
+% At the current grouping level we empty out our current cache and
+% keep it for working purposes on the stack until we return (nobody
 % references it while we are working on it).  We always enter with an
 % overfull configuration, meaning that \cmd{\FN@vsize} is negative.
 % It is calculated with the current cache\slash config setting.
@@ -1210,8 +1256,8 @@
   \penalty\FN@cache#2}
 
 \def\FN@removecheck#1#2{%
-  \ifnum#1<\FN@slotget{\number\dp\z@}
-  \ifnum#2>\FN@slotget{\number\dp\z@}
+  \ifnum#1<\FN@slotget{\number\dp\z@} %
+  \ifnum#2>\FN@slotget{\number\dp\z@} %
     \@ne\fi\fi}
 %    \end{macrocode}
 % Parameter recording merely records the relevant value of the
@@ -1338,6 +1384,7 @@
     \count@\outputpenalty
     \FN@vsadjustlist
     \ifnum\count@=-13749
+%<trace> \message{receiving special penalty}%
       \global\setbox\@cclv\lastbox
       \unskip
       \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
@@ -1411,6 +1458,7 @@
       \FN@list@iterate\FN@sweepbox}%
     \ifdim\FN@vsize<\glueshrink\FN@vsize
       \ifdim\dimen@>\z@
+%<trace> \message{sending special penalty}%        
         \hrule\@height\z@\@depth\z@
         \penalty -13749
         \global\vsize=0.5\maxdimen
@@ -2177,9 +2225,6 @@
 \def\footnote{\footnotedefault}
 \def\footnotemark{\footnotemarkdefault}
 \def\footnotetext{\footnotetextdefault}
-\def\Footnotemark{\Footnotemarkdefault}
-\def\Footnotetext{\Footnotetextdefault}
-\def\Footnote{\Footnotedefault}
 %</style>
 %    \end{macrocode}
 %
