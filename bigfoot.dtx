@@ -96,8 +96,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/03/09 14:22:06 $
-  Version \FN@next $Revision: 1.3 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/03/11 00:45:33 $
+  Version \FN@next $Revision: 1.4 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -129,15 +129,26 @@
 %    \end{macrocode}
 % The |trace| option is only available if you used |docstrip| while
 % explicitly requesting |trace| functionality.
+% The following bits can be set in tracing:
+% \begin{tabular}{rl}
+%   1&break decisions\\
+%   2&horizontal box building\\
+%   4&allocation stuff\\
+%   8&output routine stuff
+% \end{tabular}
 %    \begin{macrocode}
-%<trace>\newif\iffoottrace
 %<trace>\DeclareOption{trace}{%
-%<trace>  \foottracetrue
+%<trace>\DeclareOption*{\ftflags=\CurrentOption\relax}%
+%<trace>  \AtEndOfPackage{\RequirePackage{trace}\relax
 %<trace>  \errorcontextlines\maxdimen
 %<trace>  \showboxdepth3
 %<trace>  \showboxbreadth100
-%<trace>  \AtEndOfPackage{\RequirePackage{trace}\relax}%
+%<trace>  \tracingonline=\@ne}%
 %<trace>}
+%<trace>\newcount\ftflags
+%<trace>\def\foottrace#1{\ifnum\numexpr(\ftflags+(#1))/(2*#1)*(2*#1)%
+%<trace>  =\numexpr(\ftflags+3*#1/2)/#1*#1\relax
+%<trace>  0\else1\fi1}
 
 \ProcessOptions \relax
 %    \end{macrocode}
@@ -422,7 +433,7 @@
     \let#1\FN@slotfreelist
     \xdef\FN@slotfreelist{\csname FN@slot\FN@slotfreelist\endcsname}%
   \fi
-%<trace>  \iffoottrace\message{^^JAllocated #1^^J}\fi
+%<trace>  \if\foottrace4\message{^^JAllocated #1^^J}\fi
 }
 %    \end{macrocode}
 % \end{macro}
@@ -431,23 +442,45 @@
 %   freelist.
 %    \begin{macrocode}
 \def\FN@freeslot#1{%
-%<trace>  \iffoottrace\message{^^JFreeing #1^^J}\fi
+%<trace>  \if\foottrace4\message{^^JFreeing #1^^J}\fi
   \global\expandafter\let\csname FN@slot#1\endcsname=\FN@slotfreelist
   \xdef\FN@slotfreelist{#1}}
 %    \end{macrocode}
 % \end{macro}
 
-
-
 % \subsubsection{Dealing with footnote stacks}
+% Footnote stacks are used for paired footnotes that refer to a text
+% range instead of a single text point.  For example, you can use
+% something like
+% \begin{verbatim}
+% Text \var<{was there}is here\var>
+% \end{verbatim}
+% To have a text variant ``was there'' for the original passage ``is
+% here'', and mark it, say, as ``\textsuperscript{a}is
+% here\textsuperscript{\textsl{a}}'' by employing the |suffix| package
+% suitably.  This would anchor the footnote at the start of the
+% passage.  It would also be imaginable to implement the syntax
+% \begin{verbatim}
+% Text \var<is here\var>{was there}
+% \end{verbatim}
+% for anchoring it at the end of the given passage.
 %    \begin{macrocode}
 \global\let\FN@stacklist\@empty
-
+%    \end{macrocode}
+% \begin{macro}{\DefineFootnoteStack}
+%   This command is used for defining a footnote stack.  It gets a
+%   single argument which is the name of the stack and should consist
+%   just of ordinary character tokens.
+%    \begin{macrocode}
 \def\DefineFootnoteStack#1{%
   \global\expandafter\let\csname FN@stack@#1\endcsname\@empty
   \@cons\FN@stacklist{{#1}}%
 }
-
+%    \end{macrocode}
+% \end{macro}
+% At the end of the document, all stacks are checked to make sure they
+% have been used up completely.
+%    \begin{macrocode}
 \AtEndDocument{\FN@checkstacklist}
 
 \def\FN@checkstacklist{{\let\@elt\FN@checkstack
@@ -459,12 +492,22 @@
 \def\FN@checkstackentry#1#2#3{%
   \PackageError{bigfoot}{Unfinished #1 #2 from line #3}%
   {The specified footnote range is uncomplete}}
-
+%    \end{macrocode}
+% \begin{macro}{\PushFootnoteMark}
+%   This gets one argument, the name of the footnote stack.  It pushes
+%   the current footnote mark name stored in \cmd{\@thefnmark} onto
+%   the footnote stack.
+%    \begin{macrocode}
 \def\PushFootnoteMark#1{{\let\@elt\relax
   \expandafter\unrestored@protected@xdef \csname FN@stack@#1\endcsname
   {\@elt{#1}{\@thefnmark}{\number\inputlineno}\csname
   FN@stack@#1\endcsname}}}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\PopFootnoteMark}
+%   This gets one argument, the name of the footnote stack.  It pops
+%   the value of \cmd{\@thefnmark} from the named footnote stack.
+%    \begin{macrocode}
 \def\PopFootnoteMark#1{\expandafter
   \ifx\csname FN@stack@#1\endcsname\@empty
     \PackageError{bigfoot}{Empty footnote stack #1}%
@@ -472,13 +515,17 @@
   \else
   {\let\@elt\FN@firstpop
     \iffalse{\fi\csname FN@stack@#1\endcsname}}\fi}
-
+%    \end{macrocode}
+% \end{macro}
 \def\FN@firstpop#1#2#3{\protected@xdef\@thefnmark{#2}%
   \let\@elt\relax
   \expandafter\protected@xdef\csname FN@stack@#1\endcsname{%
     \iffalse}\fi}
 %    \end{macrocode}
-
+%
+%
+%\subsubsection{The works}
+%
 % \begin{macro}{\FN@cache}
 %   Cacheboxes cache the typeset forms of the insertion boxes for a
 %   certain configuration of footnotes.
@@ -486,7 +533,6 @@
 \def\FN@cache#1{\csname FN@cache\number#1\endcsname}
 %    \end{macrocode}
 % \end{macro}
-
 % \cmd{\FN@sortlist} takes the current vertical list and sorts the
 % contained boxes according to their width (which is supposed to
 % contain the sort key).
@@ -708,6 +754,37 @@
   \fi}
 %    \end{macrocode}
 % \end{macro}
+% Ok, now follow a lot of fuzzy calculation routines.  When we are
+% considering truth values, |\p@| (1pt) corresponds to a value of
+% ``true'', and |\z@| corresponds to ``false''.
+% \begin{macro}{\FN@fuzzyeval}
+%   This calculates a ratio, something with which you multiply.  The
+%   first two arguments of the function define an interval, and the
+%   third argument is a value in that interval.  If |#3| is equal to
+%   |#1|, the resulting ratio is~0, if the |#3| is equal to |#2|, the
+%   resulting ratio is~1.  Values in between are linearly
+%   interpolated.  Values outside of the interval are mapped to 0
+%   and~1.  If all three values are equal (hardly useful), 1 is
+%   returned.
+%    \begin{macrocode}
+\def\FN@fuzzyeval#1#2#3{%
+  \ifdim\dimexpr(#3)<\dimexpr(#2)\relax
+    \ifdim\dimexpr(#3)>\dimexpr(#1)\relax
+      *(\dimexpr(#3)-(#1))%
+      /(\dimexpr(#2)-(#1))%
+    \else *\z@
+    \fi
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@fuzzyor}
+%   This returns probabilistic \textsc{or}:
+%   \[(|#1|+|#2|-|#1|\cdot|#2|)\]
+%    \begin{macrocode}
+\def\FN@fuzzyor#1#2{(\p@-(\p@-(#1))*(\dimexpr\p@-(#2))/\p@)}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@magicclue}
 % Ok, so here is the magic glue calculator.  |#1| and~|#2| give the
 % range over which the preceding line changes from `short' to `long'.
 % |#3| and |#4| give the range over which the current line changes
@@ -715,19 +792,8 @@
 % function, and then a penalty is chosen which ranges from |#5|
 % to~|#6| for short to long.
 %    \begin{macrocode}
-\def\FN@fuzzyeval#1#2#3{%
-  \ifdim\dimexpr#3<\dimexpr(#2)\relax
-    \ifdim\dimexpr#3>\dimexpr(#1)\relax
-      *(\dimexpr(#3)-(#1))%
-      /(\dimexpr(#2)-(#1))%
-    \else *\z@
-    \fi
-  \fi}
-
-\def\FN@fuzzyor#1#2{(\p@-(\p@-(#1))*(\dimexpr\p@-(#2))/\p@)}
-
 \def\FN@magicglue#1#2#3#4#5#6{%
-%<trace> \iffoottrace\traceon\fi
+%<trace> \if\foottrace2\traceon\fi
   \dimen@\dimexpr\p@\FN@fuzzyeval{#1}{#2}\FN@lasthsize\relax
   \dimen@ii\dimexpr\p@\FN@fuzzyeval{#3}{#4}{\ht\z@+\dp\z@}\relax
   \dimen@\dimexpr\FN@fuzzyor\dimen@\dimen@ii
@@ -741,13 +807,17 @@
   \fi
   \xdef\FN@found{\number\numexpr\FN@found+\@ne}%
 }
-
-\def\@makefnbreak{\FN@magicglue
-  {\footnotesep+\dp\strutbox}%
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\@makefnbreak}
+%   This calculates the glue for the standard horizontal footnotes.
+%    \begin{macrocode}
+\def\@makefnbreak{\FN@magicglue {\footnotesep+\dp\strutbox}%
   {\footnotesep+\dp\strutbox+\baselineskip}%
   {\footnotesep+\dp\strutbox+0.5\baselineskip}%
   {\footnotesep+\dp\strutbox+2\baselineskip}{-200}{-12000}}
 %    \end{macrocode}
+% \end{macro}
 % \cmd{\FN@removehboxes} is called with box~0 set to the next box to
 % be appended to the current list (all preceding hboxes on the
 % current list will have to go in front).
@@ -986,6 +1056,9 @@
   \fi
   \wd\z@\dimen@
   \dp\z@\FN@masterslot sp\relax
+%<trace>      \ifnum\z@<0\FN@slotget{\FN@masterslot} %
+%<trace>      \else \errmessage{Inconsistent
+%<trace>        \string\FN@masterslot=\FN@masterslot}\fi
   \MFL@insert\FN@masterinsert{\nointerlineskip\box\z@}%
   \MFL@endminipage
   \FN@colorstackegroup
@@ -999,29 +1072,32 @@
 
 \newbox\FN@insertions
 
-\def\MFL@showone#1#2{\message{Box #2:}\showbox#2%
-  \MFL@checkconsistency{#2}%
-  \message{Cachebox #2:}\showbox\FN@cache#2%
-  \MFL@checkconsistency{#2}}
-
-\def\MFL@checkconsistency#1{{%
-  \setbox\z@\vbox{\unvcopy#1%
-    \MFL@checkconsistencyi}}}
-
-\def\MFL@checkconsistencyi{%
-    \setbox\z@\lastbox
-    \ifvoid\z@
-      \ifnum\FN@slotget{\number\dp\z@}>\z@
-        {\MFL@checkconsistencyi}%
-      \else \errmessage{Inconsistent box}%
-      \fi
-    \fi}
-
-\def\MFL@showall{{%
-    \showboxbreadth=\maxdimen
-    \showboxdepth=\tw@
-    \tracingonline=\@ne
-    \FN@nest@iterate\MFL@showone}}
+%<trace>\def\MFL@showone#1#2{\message{Box #2:}\showbox#2%
+%<trace>  \MFL@checkconsistency{#2}%
+%<trace>  \message{Cachebox #2:}\showbox\FN@cache#2%
+%<trace>  \MFL@checkconsistency{#2}}
+%<trace>
+%<trace>\def\MFL@checkconsistency#1{{%
+%<trace>  \setbox\z@\vbox{\unvcopy#1%
+%<trace>    \MFL@checkconsistencyi{#1}}}}
+%<trace>
+%<trace>\def\MFL@checkconsistencyi#1{%
+%<trace>    \unpenalty\unskip
+%<trace>    \setbox\z@\lastbox
+%<trace>    \ifvoid\z@\else
+%<trace>      \ifnum\z@<0\FN@slotget{\number\dp\z@} %
+%<trace>        {\MFL@checkconsistencyi{#1}}%
+%<trace>      \else \errmessage{Inconsistent box #1}%
+%<trace>         \showboxdepth3\showboxbreadth100
+%<trace>         \showbox#1\relax
+%<trace>      \fi
+%<trace>    \fi}
+%<trace>
+%<trace>\def\MFL@showall{{%
+%<trace>    \showboxbreadth=\maxdimen
+%<trace>    \showboxdepth=\tw@
+%<trace>    \tracingonline=\@ne
+%<trace>    \FN@nest@iterate\MFL@showone}}
 %    \end{macrocode}
 % \begin{macro}{\FN@retaindelayed}
 %   This is a complex macro that removes all boxes from the current
@@ -1038,13 +1114,18 @@
   \setbox\z@\lastbox
   \ifcase
     \ifvoid\z@\m@ne\fi \FN@config\z@
+%<trace>  \if\foottrace8\message{^^J\string\FN@retaindelayed:
+%<trace>     dropping box \FN@slotget{\dp\z@}}\fi
     \ifx\FN@tempinfo\@empty
       \xdef\FN@tempinfo{\FN@slotget{\number\dp\z@}}%
     \fi
     \ifnum\dp\z@=\count@\else \FN@freeslot{\number\dp\z@}\fi
 %<trace> \ifnum\dp\z@<1sp \errmessage{Unidentified box}\fi
     \FN@retaindelayed
-  \or  {\FN@retaindelayed \nointerlineskip \box\z@}%
+  \or
+%<trace> \if\foottrace8\message{^^J\string\FN@retaindelayed:
+%<trace>    retaining box \FN@slotget{\dp\z@}}\fi
+    {\FN@retaindelayed \nointerlineskip \box\z@}%
   \else \unpenalty \setbox\z@\lastbox
   \fi}
 %    \end{macrocode}
@@ -1063,6 +1144,8 @@
 %   \cmd{\nobreak} penalty.
 %    \begin{macrocode}
 \def\MFL@processplain#1{%
+%<trace> \MFL@checkconsistency#1%
+%<trace> \MFL@checkconsistency{\FN@cache#1}%
    \ifvoid\FN@cache#1%
      \global\setbox\FN@tempbox\vbox\bgroup
        \unvbox#1%
@@ -1384,7 +1467,7 @@
     \count@\outputpenalty
     \FN@vsadjustlist
     \ifnum\count@=-13749
-%<trace> \message{receiving special penalty}%
+%<trace> \if\foottrace8\message{receiving special penalty}\fi
       \global\setbox\@cclv\lastbox
       \unskip
       \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
@@ -1458,7 +1541,7 @@
       \FN@list@iterate\FN@sweepbox}%
     \ifdim\FN@vsize<\glueshrink\FN@vsize
       \ifdim\dimen@>\z@
-%<trace> \message{sending special penalty}%        
+%<trace> \if\foottrace8\message{sending special penalty}\fi%
         \hrule\@height\z@\@depth\z@
         \penalty -13749
         \global\vsize=0.5\maxdimen
@@ -1621,27 +1704,58 @@
     \count@\lastpenalty
     \unpenalty \expandafter\FN@getbreakpenaltyii
   \fi}
-
+%    \end{macrocode}
+% \begin{macro}{\FN@mainsplitreturn}
+%   This is merely an argument delimiting control sequence to make it
+%   possible to figure out which recursion levels still need visiting.
+%    \begin{macrocode}
 \def\FN@mainsplitreturn{}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@myvsize}
+%   This is the size that is yet available for the currently
+%   considered insertion (so it is the size available on the page,
+%   inversely scaled by the insertions fudge factor specified by its
+%   count register).
+%    \begin{macrocode}
 \newdimen\FN@myvsize
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\bigfoottolerance}
+%   This specifies what footnote arrangement penalty will be accepted
+%   without looking for a better solution.
+%    \begin{macrocode}
 \newcount\bigfoottolerance
 \bigfoottolerance=100
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@getbadness}
+%   This takes a skip value of remaining space and negative
+%   stretchability and shrinkability, and then calculates
+%   \cmd{\badness} depending on how good the stretching accommodates
+%   the remaining space.
+%    \begin{macrocode}
 \def\FN@getbadness#1{%
   {\hfuzz\maxdimen\hbadness\maxdimen\setbox\z@\hbox to\z@{\hskip-#1}}}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@newlevel}
+%   This is the main workhorse of |bigfoot|.  It splits a particular
+%   footnote level, recursing if necessary.  The level list is
+%   delimited with \cmd{\FN@mainsplitreturn}.
+%    \begin{macrocode}
 \def\FN@newlevel#1#2#3\FN@mainsplitreturn{%
   \count@\FN@cache#2%
   \ifvoid\count@
-%     \message{Page=\thepage #2 is empty, recursing with
-%   \the\FN@vsize^^J}%
-%     \message{Config=\FN@config^^J}%
+%<trace> \if\foottrace1\message{Page=\thepage #2 is empty, recursing with
+%<trace>   \the\FN@vsize^^J}%
+%<trace>   \message{Config=\FN@config^^J}\fi
       #3\FN@mainsplitreturn
-%     \message{Page=\thepage #2 was empty, returning with \the\FN@vsize^^J}%
-%     \message{Config=\FN@config^^J}%
+%<trace> \if\foottrace1%
+%<trace>   \message{Page=\thepage #2 was empty, returning with \the\FN@vsize^^J}%
+%<trace>   \message{Config=\FN@config^^J}\fi
   \else
-%<trace> \iffoottrace\message{Entering #2 with \FN@badness}\fi
+%<trace> \if\foottrace1\message{Entering #2 with \FN@badness}\fi
     {\def\FN@currentinsertion{#2}%
      \def\FN@currentrecursion{#3}%
      \let\FN@entryconfig\FN@config
@@ -1652,9 +1766,12 @@
      \vfuzz\maxdimen
      \let\@elt\relax
      \expandafter\FN@newleveli\expandafter}%
-%<trace> \iffoottrace\message{Exiting #2 with \FN@badness}\fi
+%<trace> \if\foottrace1\message{Exiting #2 with \FN@badness}\fi
   \fi}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@newleveli}
+%    \begin{macrocode}
 \def\FN@newleveli{%
 %    \end{macrocode}
 % \cmd{\FN@vsize} already includes the size of the complete unsplit
@@ -1673,7 +1790,9 @@
 % found the best possible split.  What we \cmd{\unvbox} here, stays
 % dormant except for the last box.  When we collect configurations
 % from cache boxes, we don't collect anything from our current box
-% that is being assembled.
+% that is being assembled.  |\box\tw@| is used for collecting whatever
+% we split off from |\box\z@|, the last box in the insertion, at the
+% front.
 %    \begin{macrocode}
     \global\setbox\count@\vbox\bgroup\unvbox\count@
       \edef\FN@bestconfig{\FN@entryconfig}%
@@ -1725,6 +1844,7 @@
 % Ok, now we have to check whether the subordinate configuration has
 % changed.
 %    \begin{macrocode}
+        \let\FN@splitcolors\@empty
         \edef\FN@slaveid{\splitbotmarks\FN@slave}%
         \ifx\FN@slaveid\@empty
           \let\FN@slaveid\FN@lowestslave%
@@ -1746,6 +1866,7 @@
 %    \begin{macrocode}
         \FN@splitfurther}
 %    \end{macrocode}
+% \end{macro}
 % Main label for reconsideration
 % We are after a split to size without configuration change, or a
 % split that caused a configuration change and was reverted for a slow
@@ -1815,7 +1936,10 @@
   \else
     \expandafter\FN@addmaterial
   \fi}
-
+%    \end{macrocode}
+% \begin{macro}{\FN@returnbest}
+%    This macro will return the current split or the previous best.
+%    \begin{macrocode}
 \def\FN@returnbest{%
   \skip@\FN@bestvsize\relax
   \dimen@\dimexpr\FN@vsize+(\dimexpr\FN@myvsize
@@ -1884,6 +2008,9 @@
         \unvbox\z@
         \ifx\FN@bestsplitcolors\@empty\else
           \dimen@\dp\FN@tempbox
+%<trace>      \ifnum\z@<0\FN@slotget{\dimen@} %
+%<trace>      \else \errmessage{Inconsistent
+%<trace>        \string\dimen@=\number\dimen@}\fi
           \global\setbox\FN@tempbox\vbox{%
             \FN@coloraftersplit\FN@bestsplitcolors
             \nointerlineskip\nobreak
@@ -1931,14 +2058,20 @@
     \FN@carriedegroup\FN@tempbox
   \fi
 }
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@carriedegroup}
+%    \begin{macrocode}
 \def\FN@carriedegroup#1{\dimen@-\dimexpr\ht#1+\dp#1\relax
   \nointerlineskip\box#1%
   \nobreak
   \expandafter\egroup
   \expandafter\ht\expandafter\count@\expandafter\dimexpr
   \the\dimen@+\ht\count@\relax}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@addmaterial}
+%    \begin{macrocode}
 \def\FN@addmaterial{%
   \setbox\tw@\vsplit\z@ to\dimexpr\FN@myvsize-\splitmaxdepth\relax
   \ifcase\ifvoid\tw@ \@ne\fi
@@ -1946,6 +2079,7 @@
     \edef\FN@next{\splitbotmarks\FN@slave}%
     \ifx\FN@next\@empty
 %    \end{macrocode}
+% \end{macro}
 % The split was successful and yields a new best underfull in our
 % current configuration.
 %    \begin{macrocode}
@@ -1976,7 +2110,7 @@
   \ifx\FN@next\@empty \FN@contribute@tw@
     \expandafter\FN@slowsplit
   \else
-%<trace>    \iffoottrace
+%<trace>    \if\foottrace1%
 %<trace>      \message{Slowsplit in \FN@currentinsertion on \thepage^^J}%
 %<trace>    \fi
     \FN@uncontribute@tw@
@@ -2041,18 +2175,20 @@
       \global\setbox\FN@tempbox\vbox{\box4\nointerlineskip\box\z@}%
       \egroup
       \FN@tempinfo
+      \let\FN@splitcolors\FN@bestsplitcolors
       \setbox\z@\lastbox
 %    \end{macrocode}
 % Now all relevant info has been retrieved, and we collect the best
 % box info in box two.  We start with the current list.  Disassembling
 % \cmd{\FN@tempbox} first has the advantage that the case of box~4
-% being void does not need extra treatment.
+% being void does not need extra treatment.  |\copy\z@| retains the
+% value at the outer level.
 %    \begin{macrocode}
       \setbox\tw@\vbox{\unvcopy\FN@tempbox
         \setbox\tw@\lastbox \setbox4\lastbox
-        \nointerlineskip\copy\z@
+        \nointerlineskip\copy\z@\nointerlineskip
         \ifnum\FN@currentinsertion=\FN@savebox
-          \setbox\z@\box\tw@
+          \box\tw@
         \else
           \setbox\z@\vbox{\marks\FN@master{\FN@masterslot}%
             \marks\FN@slave{\FN@slaveid}%
@@ -2061,8 +2197,8 @@
           \wd\z@\maxdimen
           \ht\z@\dimexpr\ht\z@+\dp\z@-\FN@masterslot sp\relax
           \dp\z@ \FN@masterslot sp\relax
+          \box\z@
         \fi
-        \nointerlineskip \box\z@
         \kern\z@
         \let\@elt\FN@cachesize
         \advance\FN@myvsize-\dimexpr
@@ -2105,7 +2241,9 @@
 % we want to contribute box~2 back without any topskip glue, so we
 % manually remove any such glue by splitting an empty box off.
 %    \begin{macrocode}
-  \edef\FN@splitcolors{\splitbotmarks\FN@color}%
+  \begingroup\edef\FN@next{\splitbotmarks\FN@color}%
+  \ifx\FN@next\@empty \endgroup\else \endgroup
+    \edef\FN@splitcolors{\splitbotmarks\FN@color}\fi
   \ifvoid4
     \setbox4\vbox{\splitdiscards}%
     \setbox\tw@\vbox{\unvbox\tw@}%
@@ -2203,8 +2341,13 @@
   \setbox\z@\lastbox
   \ifcase
     \ifvoid\z@\m@ne\fi \FN@config\z@
+%<trace>  \if\foottrace8\message{^^J\string\FN@retainkept:
+%<trace>     retaining box \FN@slotget{\dp\z@}}\fi
     {\FN@retainkept \nointerlineskip \box\z@}%
-  \or  \FN@retainkept
+  \or
+%<trace>  \if\foottrace8\message{^^J\string\FN@retainkept:
+%<trace>     dropping box \FN@slotget{\dp\z@}}\fi
+    \FN@retainkept
   \fi}
 %    \end{macrocode}
 % \end{macro}

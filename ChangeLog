@@ -1,3 +1,11 @@
+2005-03-11  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Add \ftflags tracing, remove \iffoottrace again.
+	When using the trace option, unknown options are interpreted as
+	added flags to track certain trace features.  Add lots of tracing
+	output and document some more stuff.  Also try working
+	\cmd{\FN@splitcolors} correctly.	
+
 2005-03-09  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Add trace version of \FN@slotget that checks we are
