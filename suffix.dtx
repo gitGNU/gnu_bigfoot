@@ -18,7 +18,7 @@
 %%     Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 %%     Boston, MA 02111-1307  USA
 %%\fi
-% \CheckSum{233}
+% \CheckSum{224}
 % \GetFileInfo{suffix.sty}
 % \author{David Kastrup\thanks{\href{mailto:dak@gnu.org}^^A
 %   {Email: \texttt{dak@gnu.org}}}}
@@ -86,9 +86,9 @@
 {\catcode`\-\active \def-{.}
   \xdef\reserved@a{\expandafter\@gobble\next$Name:  $\@empty}}
 \def\next$#1: #2 #3${#2}
-\ifx\reserved@a\@empty \gdef\reserved@a{CVS-\next$Revision: 1.2 $}\fi
+\ifx\reserved@a\@empty \gdef\reserved@a{CVS-\next$Revision: 1.3 $}\fi
 \edef\next{\noexpand
-  \ProvidesPackage{suffix}[\next$Date: 2004/02/19 19:49:21 $
+  \ProvidesPackage{suffix}[\next$Date: 2004/11/09 01:23:22 $
   \reserved@a\space]}
 \next
 \ifcase\ifx\eTeXversion\@undefined \@ne\fi
@@ -100,8 +100,8 @@
 %    \end{macrocode}
 % \begin{macro}{\WithSuffix}
 %   Then we define the \cmd{\WithSuffix} command.  We use
-%   \cmd{\@temptokena} to collect prefixes and let \cmd{\WSF@global} to
-%   |\global| for global definitions.
+%   \cmd{\@temptokena} to collect prefixes and let \cmd{\WSF@global}
+%   to |\global| for global definitions.
 %
 %    \begin{macrocode}
 \def\WithSuffix{\@temptokena{}\let\WSF@global\relax
@@ -219,24 +219,9 @@
 %</style>
 %    \end{macrocode}
 %\end{macro}
-% \section{Various driver files}
-% The installer, in case it is missing.  If it is to be used via
-% |make|, we don't specify an installation path, since
-% \begin{quote}
-%   |make install|
-% \end{quote}
-% is supposed to cater for the installation itself.
-%    \begin{macrocode}
-%<installer> \input docstrip
-%<installer&make> \askforoverwritefalse
-%<installer> \generate{
-%<installer>    \file{suffix.drv}{\from{suffix.dtx}{driver}}
-%<installer&!make>    \usedir{tex/latex/bigfoot}
-%<installer>    \file{suffix.sty}{\from{suffix.dtx}{style}}
-%<installer> }
-%<installer> \endbatchfile
-%    \end{macrocode}
-% And here comes the documentation driver.
+% \section{The driver file for the documentation}
+% Installation is done by |bigfoot.ins|, so look there for more
+% information for that.  Here comes the documentation driver.
 %    \begin{macrocode}
 %<driver> \documentclass{ltxdoc}
 %<driver> \usepackage{hyperref}
@@ -248,6 +233,6 @@
 % \Finale{}
 % \endinput
 % Local Variables:
-% mode: latex
+% mode: doctex
 % TeX-master: "suffix.drv"
 % End:
