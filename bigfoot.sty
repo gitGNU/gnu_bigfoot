@@ -1,10 +1,25 @@
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/02/22 01:31:24 $
-  Version \FN@next $Revision: 1.4 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/14 12:07:43 $
+  Version \FN@next $Revision: 1.5 $]%}
 
-% Make sure we get reaonable behavior also in the absence of perpage.sty
+% Make sure we get reasonable behavior also in the absence of perpage.sty
 \ifx\@undefined\pp@label \def\pp@label{1} \fi
+
+\DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
+  has no effect:^^J
+  Spacing will be guessed from `\string\@makefntext' unless^^J
+  `\string\@preparefnhtext' is redefined}}
+
+\DeclareOption{para*}{\PackageInfo{bigfoot}{Compatibility option
+    `para*':^^J
+    Redefining `\string\@preparefnhtext'}%
+  \def\@preparefnhtext{\ifx\@thefnmark\@empty
+    \else\@makefnmark\nobreak\fi}}
+
+\DeclareOption{ruled}{\PassOptionsToPackage{ruled}{manyfoot}}
+
+\ProcessOptions
 
 \newif\iffoottrace
 %\foottracetrue
@@ -16,6 +31,7 @@
 \fi
 \RequirePackage{manyfoot}
 \RequirePackage{etex}
+\RequirePackage{suffix}
 \RequirePackage{perpage}
 
 % We need the appropriate splitting parameters set for the footnote
@@ -181,6 +197,7 @@
   \FN@specific\FN@masterinsert\@makefntext{%
     \vadjust{\nobreak\vskip-\baselineskip}\nobreak\hfill\break#1}}
 
+\ifx\@preparefnhtext\@undefined
 \def\@preparefnhtext{{%
   \setbox\z@\hbox{\FN@specific\FN@masterinsert\@makefntext{%
       \unskip\unpenalty\setbox\z@\lastbox
@@ -198,6 +215,7 @@
       \xdef\FN@tempinfo{\hskip\the\dimen@
         \vadjust{}\nobreak\hskip-\the\dimen@ii\relax}}}}
   \FN@tempinfo}
+\fi
 % Now we have in |\FN@tempinfo| the excess width of the label we
 % don't want to preserve when doing in-paragraph footnote setting.  A
 % sequence of glue before a label now has to consist of stuff that
@@ -221,6 +239,7 @@
 % first line is something we can't simulate, but again, it should
 % occur rarely.  When |\parshape| is active, |\hangindent| is ignored.
 
+\ifx\@makefnvbox\@undefined
 \def\@makefnvbox#1{\vbox{%
       \reset@font\footnotesize
       \interlinepenalty\interfootnotelinepenalty
@@ -232,6 +251,7 @@
       \FN@specific\FN@masterinsert\@makefnvtext{#1}%
       \unskip\@finalstrut\strutbox
     }}
+\fi
 
 \def\hfootfraction{0.9}
 \def\vtypefraction{0.6}
@@ -420,8 +440,21 @@
   \else\expandafter\z@
     \expandafter#2\fi}
 
-\def\FootnoteSpecific#1#2#3{\toks@{#2}\the\expandafter\toks@
-  \csname FN\string#3\number\csname footins#1\endcsname\endcsname}
+\def\FootnoteSpecific#1{\count@\csname footins#1\endcsname\toks@{}%
+  \FN@specific@ii}
+
+\long\def\FN@specific@ii#1#2{\toks@\expandafter{\the\toks@#1}%
+  \the\expandafter\toks@
+  \csname FN\string#2\number\count@\endcsname}
+
+\WithSuffix\def\FN@specific@ii\long{\toks@\expandafter
+  {\the\toks@\long}\FN@specific@ii}
+
+\WithSuffix\def\FN@specific@ii\global{\toks@\expandafter
+  {\the\toks@\global}\FN@specific@ii}
+
+\WithSuffix\def\FN@specific@ii\expandafter{\expandafter
+  \FN@specific@ii\expandafter}
   
     
 \def\FN@fnoteplain{\FN@fnotecommon\vbox}
@@ -463,12 +496,14 @@
     \edef\FN@errorstack{\FN@errorstack^^J%
 \FN@masterinsert\space entered in line \number\inputlineno}%
     \let\FN@boxtype=#1%
-    \setbox\z@#1\bgroup\let\MFL@minipage\relax
-      \let\MFL@endminipage\relax
-      \reset@font\footnotesize
+    \setbox\z@#1\bgroup
 % The following is for the likes of PDFTeX which has its own idea
 % about how to restore a color stack.
       \let\current@color\default@color
+      \FN@@color@begingroup
+      \let\MFL@minipage\relax
+      \let\MFL@endminipage\relax
+      \normalfont\footnotesize
       \expandafter\xdef\csname FN@ht\number#2\endcsname{\the\footnotesep}%
       \expandafter\xdef\csname FN@dp\number#2\endcsname{\the\dp\strutbox}%
       \interlinepenalty\interfootnotelinepenalty
@@ -477,6 +512,7 @@
       \ifx\FN@boxtype\vbox \noindent
       \else \FN@specific{#2}\@preparefnhtext
       \fi
+      \normalcolor
       \FN@specific{#2}\@makefntext
       \iffalse\fi
       \marks\FN@master{\FN@masterslot}%
@@ -535,7 +571,7 @@
   \let\reset@color\FN@reset@color
   \let\color@begingroup\FN@color@begingroup}
 
-\def\FN@colorstackegroup{\ifx\FN@colorstack\@empty \egroup
+\def\FN@colorstackegroup{\egroup\ifx\FN@colorstack\@empty
   \global\let\FN@colorstack\FN@savecolorstack \fi}
 
 \def\FN@colorstackfinish{\def\@elt##1##2{\FN@@reset@color##2}%
@@ -549,11 +585,11 @@
   \bgroup\def\@elt##1##2{\def\FN@next{##1}{\gdef\FN@colorstack{##2}}}%
     \let\FN@next\@empty
     \FN@colorstack
-    \expandafter\egroup
-  \ifx\FN@next\@empty
-    \FN@colorstackegroup
-  \else \FN@@reset@color
-    \marks\FN@color{\FN@colorstack}%
+    \ifx\FN@next\@empty
+      \FN@colorstackegroup
+    \else \egroup
+      \FN@@reset@color
+      \marks\FN@color{\FN@colorstack}%
   \fi}
 
 \def\FN@color@begingroup{%
@@ -578,6 +614,7 @@
   \unskip
   \ifx\FN@boxtype\vbox\@finalstrut\strutbox\fi
   \FN@colorstackfinish
+  \color@endgroup
   \egroup
   \global\advance\FN@id\@ne
   \marks\FN@slave{\number\FN@id}%
