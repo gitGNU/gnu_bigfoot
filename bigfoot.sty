@@ -1,7 +1,7 @@
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/25 17:50:15 $
-  Version \FN@next $Revision: 1.11 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/29 01:54:46 $
+  Version \FN@next $Revision: 1.12 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J
@@ -505,13 +505,14 @@
 \def\FN@slotget#1{\csname FN@slot#1\endcsname}
 
 \def\FN@fnotecommon#1#2#3{%
+  \leavevmode
+  \stepcounter{FN@totalid}%
   \NCC@makemark{#3}%
   \ifnum#2<\FN@masterinsert
-    \stepcounter{FN@totalid}%
     \FN@colorstackbgroup\MFL@minipage
     \FN@newslot\FN@masterslot
     \count@\FN@id
-    \dimen@=\dimexpr64\p@*\FN@masterinsert-\pp@label sp\relax
+    \dimen@=\dimexpr64\p@*\FN@masterinsert-\c@FN@totalid sp\relax
     \def\FN@masterinsert{#2}%
     \edef\FN@errorstack{\FN@errorstack^^J%
 \FN@masterinsert\space entered in line \number\inputlineno}%
