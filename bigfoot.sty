@@ -1,7 +1,7 @@
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/14 20:04:53 $
-  Version \FN@next $Revision: 1.6 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/16 06:46:26 $
+  Version \FN@next $Revision: 1.7 $]%}
 
 % Make sure we get reasonable behavior also in the absence of perpage.sty
 \ifx\@undefined\pp@label \def\pp@label{1} \fi
@@ -473,10 +473,11 @@
     \let#1\FN@slotfreelist
     \xdef\FN@slotfreelist{\csname FN@slot\FN@slotfreelist\endcsname}%
   \fi
-  \iffoottrace\message{^^JAllocated #1^^J}\fi}
+%  \iffoottrace\message{^^JAllocated #1^^J}\fi
+}
 
 \def\FN@freeslot#1{%
-  \iffoottrace\message{^^JFreeing #1^^J}\fi
+%  \iffoottrace\message{^^JFreeing #1^^J}\fi
   \global\expandafter\let\csname FN@slot#1\endcsname=\FN@slotfreelist
   \xdef\FN@slotfreelist{#1}}
 
@@ -1065,6 +1066,12 @@
       \box\@cclv}%
     \gdef\FN@config{}%
     \global\setbox\FN@savebox\vbox{}%
+    \gdef\FN@badness{0}%
+    \edef\FN@bestebadness{\number\maxdimen}%
+    \edef\FN@defaultpenalty{\ifnum\outputpenalty<\@M
+        \number\outputpenalty
+      \else
+        0\fi}%
     \let\@elt\FN@newlevel
     \@elt{}\FN@savebox\FN@nestlist\FN@mainsplitreturn
     \def\next{0}%
@@ -1157,6 +1164,50 @@
 % with \cmd{\FN@myvsize} in our iterations here, which is set to the
 % absolute maximum of material from this footnote admissable to the
 % page.
+%
+% What about the penalties and badness we collect?  An unsplit
+% footnote block carries a penalty of~0 (so we need not take into
+% account unsplit footnote blocks at all during our bookkeeping, as
+% they are neutral), a split footnote block is prepenalized with a
+% penalty of~10000, plus the badness of the split, plus any penalties
+% associated with the split (limited to the $[-10000\ldots10000]$
+% range).  This means that no operation on other footnote blocks can
+% lower an already accumulated score.  This in turn means that we can
+% prune any operations leading to a worse score than the preceding
+% best score without having to actually recurse.
+%
+% This strategy will usually buy us a minimum number of split
+% footnotes (since the penalty of~10000 is not easy to compensate)
+% and corresponds rather closely to \TeX's own idea of footnote
+% splitting.
+
+% The following routine will analyze a box where the results from
+% \cmd{\splitdiscards} are stored and return the penalty associated
+% with the breakpoint in the global macro \FN@breakpenalty.
+
+\def\FN@getbreakpenalty#1{{\setbox\z@
+    \vbox{\unvcopy#1%
+      \count@\FN@defaultpenalty
+      \FN@getbreakpenaltyii
+      \xdef\FN@breakpenalty{\number\count@}%
+    }}}
+
+\def\FN@getbreakpenaltyii{%
+  \ifcase
+    \ifnum\lastnodetype<\z@ \m@ne\fi
+    \ifnum\lastnodetype<11 \@ne\fi
+    \ifnum\lastnodetype>13 \@ne\fi
+    \numexpr\lastnodetype-9\relax
+  \or
+    \PackageError{bigfoot}{Illegal node type}{This can't happen}%
+  \or
+    \count@\z@ \unskip \expandafter\FN@getbreakpenaltyii
+  \or
+    \count@\z@ \unkern \expandafter\FN@getbreakpenaltyii
+  \or
+    \count@\lastpenalty
+    \unpenalty \expandafter\FN@getbreakpenaltyii
+  \fi}
 
 \def\FN@mainsplitreturn{}
 
@@ -1177,15 +1228,18 @@
 %     \message{Page=\thepage #2 was empty, returning with \the\FN@vsize^^J}%
 %     \message{Config=\FN@config^^J}%
   \else
+    \iffoottrace\message{Entering #2 with \FN@badness}\fi
     {\def\FN@currentinsertion{#2}%
      \def\FN@currentrecursion{#3}%
      \let\FN@entryconfig\FN@config
+     \let\FN@entrybadness\FN@badness
      \splittopskip\csname FN@ht\number#2\endcsname\relax
      \splitmaxdepth\csname FN@dp\number#2\endcsname\relax
      \vbadness=\maxdimen
      \vfuzz\maxdimen
      \let\@elt\relax
      \expandafter\FN@newleveli\expandafter}%
+    \iffoottrace\message{Exiting #2 with \FN@badness}\fi
   \fi}
 
 \def\FN@newleveli{%
@@ -1205,8 +1259,7 @@
 % from cache boxes, we don't collect anything from our current box
 % that is being assembled.
     \global\setbox\count@\vbox\bgroup\unvbox\count@
-      \edef\FN@bestconfig{\FN@config}%
-      \edef\FN@bestbadness{\number\maxdimen}%
+      \edef\FN@bestconfig{\FN@entryconfig}%
       \edef\FN@bestvsize{-\the\maxdimen}%
       \setbox\tw@\box\voidb@x
       \setbox\z@\lastbox
@@ -1226,7 +1279,9 @@
 % continue splitting until we get the necessary mark of the last
 % footnote into our grasp: we can't split before that.
 
-      \ifnum\FN@currentinsertion=\FN@savebox\else
+      \ifnum\FN@currentinsertion=\FN@savebox
+      \else
+        \def\FN@defaultpenalty{-\@M}%
         \edef\FN@masterslot{\number\dp\z@}%
         \edef\FN@masterid{\FN@slotget\FN@masterslot}%
       \fi
@@ -1290,22 +1345,30 @@
     \FN@myvsize\dimexpr\FN@myvsize+%
       (\FN@vsize-\glueshrink\FN@vsize)*\@m/\count\FN@currentinsertion\relax
   \fi
+  \FN@getbreakpenalty4%
+  \xdef\FN@badness{\number\numexpr\FN@entrybadness+\@M+\FN@breakpenalty}%
+  \let\FN@next\FN@breakpenalty
+% No point in recursing if we can't beat the current best one.
+  \ifnum\FN@badness<\FN@bestebadness
 %          are we overfull?  If so, recurse once for getting better.
-  \ifdim\FN@myvsize<\z@
-    \advance\FN@myvsize-\dimexpr
-      (\FN@vsize-\glueshrink\FN@vsize)%
-       *\@m/\count\FN@currentinsertion\relax
-    \global\advance\FN@vsize\dimexpr\FN@myvsize
-      *\count\FN@currentinsertion/\@m\relax\relax
-    \let\@elt\FN@newlevel
-    \FN@currentrecursion\FN@mainsplitreturn
-    \let\@elt\relax
-    \global\advance\FN@vsize-\dimexpr\FN@myvsize
-      *\count\FN@currentinsertion/\@m\relax\relax
-    \advance\FN@myvsize\dimexpr
-      (\FN@vsize-\glueshrink\FN@vsize)%
-      *\@m/\count\FN@currentinsertion\relax
+    \ifdim\FN@myvsize<\z@
+      \advance\FN@myvsize-\dimexpr
+        (\FN@vsize-\glueshrink\FN@vsize)%
+         *\@m/\count\FN@currentinsertion\relax
+      \global\advance\FN@vsize\dimexpr\FN@myvsize
+        *\count\FN@currentinsertion/\@m\relax\relax
+      \let\@elt\FN@newlevel
+      \FN@currentrecursion\FN@mainsplitreturn
+      \let\@elt\relax
+      \global\advance\FN@vsize-\dimexpr\FN@myvsize
+        *\count\FN@currentinsertion/\@m\relax\relax
+      \advance\FN@myvsize\dimexpr
+        (\FN@vsize-\glueshrink\FN@vsize)%
+        *\@m/\count\FN@currentinsertion\relax
+    \fi
   \fi
+  \global\let\FN@breakpenalty\FN@next
+  \xdef\FN@badness{\number\numexpr\FN@badness-\FN@breakpenalty}%
 % At this point of time, everything to get an overfull box averted has
 % been attempted already.  Any material that would be taken over from
 % the next page will add at least a full line height to what we have
@@ -1326,18 +1389,31 @@
   \dimen@\dimexpr\FN@vsize+(\dimexpr\FN@myvsize
       -(\FN@vsize-\glueshrink\FN@vsize)%
        *\@m/\count\FN@currentinsertion)%
-     *\count\FN@currentinsertion/\@m\relax  
+     *\count\FN@currentinsertion/\@m\relax
+  \ifnum\badness>\@M
+% Overfull boxes are considered terrible.
+    \def\FN@ebadness{\number\numexpr\maxdimen-\@ne}%
+  \else
+    \ifnum\badness=\@M
+      \edef\FN@ebadness{\number\numexpr\maxdimen-\tw@}%
+    \else
+      \edef\FN@ebadness{\number\numexpr\FN@badness+\FN@breakpenalty+\badness}%
+    \fi
+  \fi
   \ifcase
-    \ifnum\FN@bestbadness<\badness \@ne\fi
-    \ifnum\FN@bestbadness>\badness \tw@\fi
+    \ifnum\FN@bestebadness<\FN@ebadness \@ne\fi
+    \ifnum\FN@bestebadness>\FN@ebadness \tw@\fi
     \ifdim\dimen@<\z@
+% Among the overfull boxes, the least overfull is king.
       \ifdim\skip@>\dimen@ \@ne \fi \tw@
     \fi
+% Among the equally bad underfull boxes, prefer the fuller one.
     \ifdim\skip@<\dimen@ \@ne \fi \tw@
   \or
 % We have an earlier contender.
     \global\let\FN@config\FN@bestconfig
     \global\FN@vsize\FN@bestvsize
+    \global\let\FN@badness\FN@bestbadness
     \egroup
 % Remove the currently typeset box from the list.
     \setbox\z@\lastbox
@@ -1356,18 +1432,22 @@
 % box~\cmd{\FN@tempbox}.
       \global\setbox\FN@tempbox\lastbox
       \setbox\z@\lastbox
-      \unvbox\z@
-      \ifx\FN@bestsplitcolors\@empty\else
-        \dimen@\dp\FN@tempbox
-        \global\setbox\FN@tempbox\vbox{%
-          \FN@coloraftersplit\FN@bestsplitcolors
-          \nointerlineskip\nobreak
-          \unvbox\FN@tempbox}%
-        \ht\FN@tempbox
-          \dimexpr\ht\FN@tempbox+\dp\FN@tempbox-\dimen@\relax
-        \dp\FN@tempbox\dimen@
-      \fi}%
+      \ifvoid\z@
+        \unvbox\FN@tempbox
+      \else
+        \unvbox\z@
+        \ifx\FN@bestsplitcolors\@empty\else
+          \dimen@\dp\FN@tempbox
+          \global\setbox\FN@tempbox\vbox{%
+            \FN@coloraftersplit\FN@bestsplitcolors
+            \nointerlineskip\nobreak
+            \unvbox\FN@tempbox}%
+          \ht\FN@tempbox
+            \dimexpr\ht\FN@tempbox+\dp\FN@tempbox-\dimen@\relax
+          \dp\FN@tempbox\dimen@
+      \fi\fi}%
   \else
+    \xdef\FN@badness{\number\numexpr\FN@badness+\FN@breakpenalty}%
     \global\advance\FN@vsize\dimexpr(\FN@myvsize
       -(\FN@vsize-\glueshrink\FN@vsize)%
        *\@m/\count\FN@currentinsertion)%
@@ -1451,11 +1531,22 @@
     -(\FN@vsize-\glueshrink\FN@vsize)%
      *\@m/\count\FN@currentinsertion)%
    *\count\FN@currentinsertion/\@m\relax
+  \FN@getbreakpenalty4%
   \FN@getbadness\skip@
+  \ifnum\badness>\@M
+    \edef\FN@ebadness{\number\numexpr\maxdimen-\@ne}%
+  \else
+    \ifnum\badness=\@M
+      \edef\FN@ebadness{\number\numexpr\maxdimen-\tw@}%
+    \else
+      \edef\FN@ebadness{\number\numexpr
+        \FN@badness+\FN@breakpenalty+\badness}%
+    \fi
+  \fi
   \dimen@\glueexpr\FN@bestvsize\relax
 % If the current break is satisfactory, we can just return it.
   \ifcase
-    \ifnum\badness>\bigfoottolerance
+    \ifnum\FN@ebadness>\bigfoottolerance
       \else \@ne\fi
 % If no change of configuration follows later, we can return the best
 % up to now.
@@ -1468,15 +1559,17 @@
 % So we check if it is at least better than the last one, in which
 % case we need to replace the previous best.
     \ifcase
-      \ifnum\FN@bestbadness>\badness \@ne\fi
-      \ifnum\FN@bestbadness<\badness \tw@\fi
+      \ifnum\FN@bestebadness>\FN@ebadness \@ne\fi
+      \ifnum\FN@bestebadness<\FN@ebadness \tw@\fi
       \ifdim\skip@<\z@
         \ifdim\dimen@<\skip@ \@ne \else \tw@\fi
       \fi
       \ifdim\dimen@>\skip@ \@ne\fi \tw@
     \or
       \xdef\FN@tempinfo{\def\noexpand\FN@bestvsize{\the\skip@}%
-        \def\noexpand\FN@bestbadness{\number\badness}%
+        \def\noexpand\FN@bestebadness{\FN@ebadness}%
+        \def\noexpand\FN@bestbadness{\number\numexpr\FN@badness+%
+          \FN@breakpenalty}%
         \def\noexpand\FN@bestconfig{\FN@config}%
         \def\noexpand\FN@slaveid{\FN@slaveid}%
         \def\noexpand\FN@bestsplitcolors{\FN@splitcolors}%
