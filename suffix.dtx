@@ -18,7 +18,7 @@
 %%     Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 %%     Boston, MA 02111-1307  USA
 %%\fi
-% \CheckSum{230}
+% \CheckSum{233}
 % \GetFileInfo{suffix.sty}
 % \author{David Kastrup\thanks{\href{mailto:dak@gnu.org}^^A
 %   {Email: \texttt{dak@gnu.org}}}}
@@ -82,13 +82,13 @@
 % First we announce the package and check for e\TeX~2.
 %   \begin{macrocode}
 %<*style>
-\def\next$#1: #2${#2}
+\def\next$#1:#2${#2}
 {\catcode`\-\active \def-{.}
-  \xdef\reserved@a{\next$Name:  $}}
+  \xdef\reserved@a{\expandafter\@gobble\next$Name:  $\@empty}}
 \def\next$#1: #2 #3${#2}
-\ifx\reserved@a\@empty \gdef\reserved@a{CVS-\next$Revision: 1.1 $}\fi
+\ifx\reserved@a\@empty \gdef\reserved@a{CVS-\next$Revision: 1.2 $}\fi
 \edef\next{\noexpand
-  \ProvidesPackage{suffix}[\next$Date: 2004/02/19 19:36:43 $
+  \ProvidesPackage{suffix}[\next$Date: 2004/02/19 19:49:21 $
   \reserved@a\space]}
 \next
 \ifcase\ifx\eTeXversion\@undefined \@ne\fi
