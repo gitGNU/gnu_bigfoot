@@ -1,7 +1,7 @@
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/14 12:07:43 $
-  Version \FN@next $Revision: 1.5 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/14 20:04:53 $
+  Version \FN@next $Revision: 1.6 $]%}
 
 % Make sure we get reasonable behavior also in the absence of perpage.sty
 \ifx\@undefined\pp@label \def\pp@label{1} \fi
@@ -1358,10 +1358,14 @@
       \setbox\z@\lastbox
       \unvbox\z@
       \ifx\FN@bestsplitcolors\@empty\else
+        \dimen@\dp\FN@tempbox
         \global\setbox\FN@tempbox\vbox{%
           \FN@coloraftersplit\FN@bestsplitcolors
           \nointerlineskip\nobreak
           \unvbox\FN@tempbox}%
+        \ht\FN@tempbox
+          \dimexpr\ht\FN@tempbox+\dp\FN@tempbox-\dimen@\relax
+        \dp\FN@tempbox\dimen@
       \fi}%
   \else
     \global\advance\FN@vsize\dimexpr(\FN@myvsize
