@@ -1,7 +1,7 @@
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/22 18:58:40 $
-  Version \FN@next $Revision: 1.10 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/25 17:50:15 $
+  Version \FN@next $Revision: 1.11 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J
@@ -99,6 +99,7 @@
     \ifvoid\z@\else
       \MFL@mpinsertsave#2{\unvbox\z@}%
     \fi
+    \marks\FN@slave{\number\FN@id}%
   \fi}
 
 \def\MFL@removevboxes{{\setbox\z@\lastbox
