@@ -1,5 +1,7 @@
 2004-11-09  David Kastrup  <dak@gnu.org>
 
+	* README: Adapt to the sty->dtx move for bigfoot itself.
+
 	* suffix.dtx: Remove driver file here, it is in bigfoot.drv now.
 	Simplify banner creation.
 

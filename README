@@ -18,17 +18,16 @@ eTeX-based; with older distributions you might need to use the
 
 File descriptions for available files:
 
-suffix.ins: This is a generated file and not in the CVS archive (but
+bigfoot.ins: This is a generated file and not in the CVS archive (but
    on CTAN).  If you need to generate it, you can do so by running
    `tex docstrip' and answering the prompts
 
      \infileext=dtx
      \outfileext=ins
      \Options=installer
-     \filelist=suffix
+     \filelist=bigfoot
 
-   Running TeX on suffix.ins will generate further files from
-   `suffix.dtx'.
+   Running TeX on bigfoot.ins will generate further files.
 
 suffix.dtx: This is the doc source for `suffix.sty', a package that
    makes it very easy to define command variants like \macro* or
@@ -42,15 +41,15 @@ perpage.sty: Work in progress, CVS only.  Used for keeping counters
    sorted in order of page appearance and making numbering per page
    possible.
 
-bigfoot.sty: Work in progress, CVS only.  Used for solving every
-   problem around footnotes and then some.  Deals with nested
-   footnotes in several apparatus, uses a backtracking algorithm for
-   finding the optimal break across several footnotes, automatically
-   breaks in-paragraph style footnotes across pages, uses fuzzy logic
-   for deciding about when to prefer in-paragraph layout to
-   one-footnote-per-paragraph layout on a per-note and per-block
-   basis, deals with colors in footnotes even when broken across
-   pages, adapts the document class's footnote style to in-paragraph
-   footnotes as good as it can, allows customization of styles
-   differing across footnote blocks, allows verbatim text in
-   footnotes and so on.
+bigfoot.dtx: Work in progress, CVS only.  This is the doc source for
+   `bigfoot.sty'.  Used for solving every problem around footnotes and
+   then some.  Deals with nested footnotes in several apparatus, uses
+   a backtracking algorithm for finding the optimal break across
+   several footnotes, automatically breaks in-paragraph style
+   footnotes across pages, uses fuzzy logic for deciding about when to
+   prefer in-paragraph layout to one-footnote-per-paragraph layout on
+   a per-note and per-block basis, deals with colors in footnotes even
+   when broken across pages, adapts the document class's footnote
+   style to in-paragraph footnotes as good as it can, allows
+   customization of styles differing across footnote blocks, allows
+   verbatim text in footnotes and so on.
