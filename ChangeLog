@@ -1,3 +1,7 @@
+2004-11-12  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Still more reorganization and documentation.
+
 2004-11-09  David Kastrup  <dak@gnu.org>
 
 	* README: Adapt to the sty->dtx move for bigfoot itself.

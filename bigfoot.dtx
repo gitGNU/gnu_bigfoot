@@ -24,10 +24,10 @@
 %         \label{eq:1}
 %         \sum_{k=1}^\infty \frac{1}{k^2} = \frac{\pi^2}{6}
 %       \end{equation}} or lists\footnoteB+{Like
-%       \begin{enumerate}
+%       \begin{itemize}
 %       \item This, or
 %       \item this.
-%       \end{enumerate}}.}
+%       \end{itemize}}.}
 %   Any subordinate footnote anchors that get moved to the next page
 %   will take the corresponding footnote with them.
 % \item The order of footnotes in an apparatus is `natural': it starts
@@ -96,8 +96,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/11/09 00:52:06 $
-  Version \FN@next $Revision: 1.1 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/11/12 22:36:46 $
+  Version \FN@next $Revision: 1.2 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -136,10 +136,10 @@
 %<trace>  \errorcontextlines\maxdimen
 %<trace>  \showboxdepth3
 %<trace>  \showboxbreadth100
-%<trace>  \RequirePackage{trace}%
+%<trace>  \AtEndOfPackage{\RequirePackage{trace}\relax}%
 %<trace>}
 
-\ProcessOptions
+\ProcessOptions \relax
 %    \end{macrocode}
 % |hyperref|'s footnote support will just cause trouble.  So if
 % |hyperref| was already loaded or is going to be loaded, we turn off
@@ -155,7 +155,7 @@
 %    \end{macrocode}
 % We require the |etex| package because
 % \begin{enumerate}
-% \item We need the facilities of the \eTeX\ engine, and where they
+% \item We need the facilities of the \eTeX\ engine; and where they
 %   are not available, the error messages from not finding the |etex|
 %   package or from loading it into the wrong engine make much more
 %   sense than what would happen otherwise.
@@ -235,8 +235,13 @@
 % \end{macro}
 % \end{macro}
 % \begin{macro}{\MFL@mpreinsert}
-% \begin{macro}{\MFL@removevboxes}
-% The trick is like with \cmd{\removehboxes}.
+%   When reinserting, we put all but the last insertion into one
+%   humongous blob.  This is so that the last insertion can be split
+%   by \TeX's paragraph splitting routines.  The footnote types that
+%   |bigfoot| supports will never get split by \TeX, anyhow, but it is
+%   conceivable that other extension packages for manyfoot work
+%   differently.  There is one difference, though: we let a slave mark
+%   escape into the main vertical list.
 %    \begin{macrocode}
 \def\MFL@mpreinsert#1#2{%
   \ifvoid#2\else
@@ -257,16 +262,20 @@
     \fi
     \marks\FN@slave{\number\FN@id}%
   \fi}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\MFL@removevboxes}
+% The trick is like with \cmd{\removehboxes}.
+%    \begin{macrocode}
 \def\MFL@removevboxes{{\setbox\z@\lastbox
     \ifvbox\z@ \MFL@removevboxes \unvbox\z@\fi}}
 %    \end{macrocode}
 % \end{macro}
-% \end{macro}
 % While the above operations actually were fixes to |manyfoot|, now we
 % actually patch it for our own purposes.  When allocating a new
 % footnote, we set its maximum dimension to \cmd{\maxdimen} (since no
-% hard limit makes sense) and allocate a cache box to go with it.  We
+% hard limit makes sense, given that we recalculate all respective
+% sizes at output time) and allocate a cache box to go with it.  We
 % also add the insertion to the list of insertions in
 % \cmd{\FN@nestlist}.
 % \begin{macro}{\MFL@startplain}
@@ -274,7 +283,7 @@
 %    \begin{macrocode}
 \def\MFL@startplain#1{\global\dimen#1\maxdimen
   \@cons\FN@nestlist{{}#1}%
-  \expandafter\newbox\csname FN@cache\number#1\endcsname}
+  \expandafter\expandafter\expandafter\newbox\FN@cache#1}
 
 \let\MFL@startpara\MFL@startplain
 %    \end{macrocode}
@@ -322,9 +331,10 @@
 % those are pretty much like the ones for the \cmd{\WithSuffix} command
 % implemented by the |suffix| package.
 % \begin{macro}{\FN@specific}
-%   We use |\romannumeral| here just for the purpose of starting an
-%   expansion fast.  It expands to an empty string when followed by
-%   |\z@| eventually.
+%   We use |\romannumeral| here just for the purpose of sustaining
+%   expansion.  It expands to nothing when followed by |\z@|
+%   eventually.  Thus expanding the expansion of \cmd{\FN@specific}
+%   again delivers the (unexpanded) final token to use.
 %    \begin{macrocode}
 \def\FN@specific#1#2{\romannumeral
   \ifcsname FN\string#2\number#1\endcsname
@@ -359,8 +369,114 @@
 % \end{macro}
 %
 % \subsection{Putting footnotes into insertions}
+% \subsubsection{Dealing with Ids}
+%   Since we have to store additional information for each footnote as
+%   long as it is not yet typeset, we allocate and deallocate numeric
+%   `id's on an as-needed base, since we do not want to store this
+%   sort of information indefinitely, with a large toll on hash space.
+%   So we work with indirect ids, where the unique ids are just
+%   referenced indirectly.  We do this with `slots'.
+% \begin{macro}{\FN@slotxdef}
+% \begin{macro}{\FN@slotget}
+%   New slots are assigned values with \cmd{\FN@slotxdef}, which can
+%   be retrieved again with \cmd{\FN@slotget}.
+%    \begin{macrocode}
+\def\FN@slotxdef#1{%
+  \global\expandafter\xdef\csname FN@slot#1\endcsname}
+
+\def\FN@slotget#1{\csname FN@slot#1\endcsname}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \begin{macro}{\FN@slotfreelist}
+% \begin{macro}{\FN@nextslot}
+%   \cmd{\FN@slotfreelist} point to the first already allocated
+%   available id to be reused.  If it is empty, none exist.  In that
+%   case, \cmd{FN@nextslot} contains the next slot number to use.
+%    \begin{macrocode}
+\def\FN@slotfreelist{}
+\def\FN@nextslot{1}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \begin{macro}{\FN@newslot}
+%   This allocates a new slot by setting the given macro to a
+%   currently unused slot number in decimal form.  If there is
+%   something left in the freelist, it is assigned, otherwise a new
+%   slot gets allocated.
+%    \begin{macrocode}
+\def\FN@newslot#1{%
+  \ifx\FN@slotfreelist\@empty
+    \edef#1{\FN@nextslot}%
+    \xdef\FN@nextslot{\number\numexpr \FN@nextslot+\@ne}%
+  \else
+    \let#1\FN@slotfreelist
+    \xdef\FN@slotfreelist{\csname FN@slot\FN@slotfreelist\endcsname}%
+  \fi
+%<trace>  \iffoottrace\message{^^JAllocated #1^^J}\fi
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@freeslot}
+%   This frees a given slot (by number) again by adding it to the
+%   freelist.
+%    \begin{macrocode}
+\def\FN@freeslot#1{%
+%<trace>  \iffoottrace\message{^^JFreeing #1^^J}\fi
+  \global\expandafter\let\csname FN@slot#1\endcsname=\FN@slotfreelist
+  \xdef\FN@slotfreelist{#1}}
+%    \end{macrocode}
+% \end{macro}
 
 
+
+% \subsubsection{Dealing with footnote stacks}
+%    \begin{macrocode}
+\global\let\FN@stacklist\@empty
+
+\def\DefineFootnoteStack#1{%
+  \global\expandafter\let\csname FN@stack@#1\endcsname\@empty
+  \@cons\FN@stacklist{{#1}}%
+}
+
+\AtEndDocument{\FN@checkstacklist}
+
+\def\FN@checkstacklist{{\let\@elt\FN@checkstack
+  \FN@stacklist}}
+
+\def\FN@checkstack#1{{\let\@elt\FN@checkstackentry
+    \csname FN@stack#1@\endcsname}}
+
+\def\FN@checkstackentry#1#2#3{%
+  \PackageError{bigfoot}{Unfinished #1 #2 from line #3}%
+  {The specified footnote range is uncomplete}}
+
+\def\PushFootnoteMark#1{{\let\@elt\relax
+  \expandafter\unrestored@protected@xdef \csname FN@stack@#1\endcsname
+  {\@elt{#1}{\@thefnmark}{\number\inputlineno}\csname
+  FN@stack@#1\endcsname}}}
+
+\def\PopFootnoteMark#1{\expandafter
+  \ifx\csname FN@stack@#1\endcsname\@empty
+    \PackageError{bigfoot}{Empty footnote stack #1}%
+    {The specified footnote type has no uncompleted range}%
+  \else
+  {\let\@elt\FN@firstpop
+    \iffalse{\fi\csname FN@stack@#1\endcsname}}\fi}
+
+\def\FN@firstpop#1#2#3{\protected@xdef\@thefnmark{#2}%
+  \let\@elt\relax
+  \expandafter\protected@xdef\csname FN@stack@#1\endcsname{%
+    \iffalse}\fi}
+%    \end{macrocode}
+
+% \begin{macro}{\FN@cache}
+%   Cacheboxes cache the typeset forms of the insertion boxes for a
+%   certain configuration of footnotes.
+%    \begin{macrocode}
+\def\FN@cache#1{\csname FN@cache\number#1\endcsname}
+%    \end{macrocode}
+% \end{macro}
 
 % \cmd{\FN@sortlist} takes the current vertical list and sorts the
 % contained boxes according to their width (which is supposed to
@@ -386,34 +502,32 @@
   \ifvoid\tw@\else
   \ifdim\wd\tw@<\wd\z@ {\FN@sortlistii}%
   \fi\nointerlineskip\box\tw@\fi\nointerlineskip\box\z@}
-
-\def\FN@sortinsert#1#2{\ifvoid\csname FN@cache\number#2\endcsname
+%    \end{macrocode}
+% \begin{macro}{\FN@sortinsert}
+%   This function is an \cmd{\@elt} function that will sort the given
+%   insertion if it is non-empty and if there is no cache box present
+%   (which would imply that the insertion had already been sorted
+%   previously).
+%    \begin{macrocode}
+\def\FN@sortinsert#1#2{\ifvoid\FN@cache#2%
   \ifvoid#2\else\global\setbox#2\vbox{\unvbox#2%
     \FN@sortlist}\fi\fi}
 %    \end{macrocode}
-% \cmd{\FN@assembleboxes} will produce the finished product, by
-% generating all boxes (not yet unpacked in order not to make the
-% |\lastbox| operation inefficient as long as we may need it).  It is
-% assumed that you have already set |\box\z@| to |\lastbox| before
-% calling this routine (or, more likely, have already assembled and
-% split the last box).  The last, not yet unpacked |\vbox| is left in
-% |\box\z@| on return.  You have to take note of the depth of the
-% originally last box before calling this routine, as the depth will
-% not be reconstructed for the last box.
-%
-% The last box might have come about by joining several horizontal
-% boxes, so splitting it might separate footnotes.  We deal with that
-% problem at a different point of time by checking the respective Ids
-% when breaking a vbox into pieces: if the split piece does not
-% contain the last footnote beginning, we switch to a slow motion
-% decomposal.
+% \end{macro}
+% \begin{macro}{\FN@maybeinvalidatecache}
+%   This is called after pulling in additional material from the
+%   page.  If the material added an insertion, the cache is junk and
+%   must be regenerated.
 %    \begin{macrocode}
 \def\FN@maybeinvalidatecache#1#2{%
-  \ifvoid#2\else\global\setbox\csname FN@cache\number#2\endcsname
-    \box\voidb@x\fi}
-
+  \ifvoid#2\else\global\setbox\FN@cache#2=\box\voidb@x\fi}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@regeneratecache}
+%   This unconditionally regenerates one cache box.
+%    \begin{macrocode}
 \def\FN@regeneratecache#1#2{%
-   \global\setbox\csname FN@cache\number#2\endcsname
+   \global\setbox\FN@cache#2=%
    \ifvoid#2%
      \box\voidb@x
    \else
@@ -423,29 +537,38 @@
        \FN@assembleboxes
        \nointerlineskip \box\z@}%
     \fi}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@mayberegeneratecache}
+%   This regenerates the cache in case the cache box has been voided
+%   in order to mark it as invalid.
+%    \begin{macrocode}
 \def\FN@mayberegeneratecache#1#2{%
-  \ifvoid\csname FN@cache\number#2\endcsname
-    \FN@regeneratecache{}{#2}%
+  \ifvoid\FN@cache#2%
+    \FN@regeneratecache{}#2%
   \fi}
 %    \end{macrocode}
-% This calculates the difference the size of the cache appears to make
-% as compared with the original insertion.  If you think you can
-% improve this by factoring out the fraction, don't.  The
-% distributive law does not hold with fixed point arithmetic.  We
-% avoid accumulative errors by scaling only complete boxes.
+% \end{macro}
+% \begin{macro}{\FN@cachesize}
+%   This calculates the size impact of a cache box on the current page
+%   as a term to be added into a \cmd{\glueexpr}-type of expression.
 %    \begin{macrocode}
 \def\FN@cachesize#1#2{%
-  \ifvoid\csname FN@cache\number#2\endcsname
+  \ifvoid\FN@cache#2%
   \else
-    +\skip#2%
-    +(\ht\csname FN@cache\number#2\endcsname
-      +\dp\csname FN@cache\number#2\endcsname)*\count#2/\@m
+    +\skip#2+(\ht\FN@cache#2+\dp\FN@cache#2)*\count#2/\@m
   \fi}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@clearcache}
+%   This just completely voids a cache register.
+%    \begin{macrocode}
 \def\FN@clearcache#1#2{%
-  \global\setbox\csname FN@cache\number#2\endcsname\box\voidb@x}
-
+  \global\setbox\FN@cache#2=\box\voidb@x}
+%    \end{macrocode}
+% \end{macro}
+% 
+% \begin{macrocode}
 \def\@makefnvtext#1{%
   \FN@specific\FN@masterinsert\@makefntext{%
     \vadjust{\nobreak\vskip-\baselineskip}\nobreak\hfill\break#1}}
@@ -466,7 +589,7 @@
         \advance\dimen@\wd\z@
       \fi
       \xdef\FN@tempinfo{\hskip\the\dimen@
-        \vadjust{}\nobreak\hskip-\the\dimen@ii\relax}}}}
+        \vadjust{}\nobreak\hskip-\the\dimen@ii\relax}}}}%
   \FN@tempinfo}
 \fi
 %    \end{macrocode}
@@ -511,6 +634,25 @@
 \def\hfootfraction{0.9}
 \def\vtypefraction{0.6}
 
+%    \end{macrocode}
+% \begin{macro}{\FN@assembleboxes}
+%   This will produce the finished product, by generating all boxes
+%   (not yet unpacked in order not to make the |\lastbox| operation
+%   inefficient as long as we may need it).  It is assumed that you
+%   have already set |\box\z@| to |\lastbox| before calling this
+%   routine (or, more likely, have already assembled and split the
+%   last box).  The last, not yet unpacked |\vbox| is left in
+%   |\box\z@| on return.  You have to take note of the depth of the
+%   originally last box before calling this routine, as the depth will
+%   not be reconstructed for the last box.
+%
+%   The last box might have come about by joining several horizontal
+%   boxes, so splitting it might separate footnotes.  We deal with
+%   that problem at a different point of time by checking the
+%   respective Ids when breaking a vbox into pieces: if the split
+%   piece does not contain the last footnote beginning, we switch to a
+%   slow motion decomposal.
+%    \begin{macrocode}
 \def\FN@assembleboxes{%
   \ifhbox\z@
     \dimen@\dp\z@
@@ -547,6 +689,7 @@
     \fi
   \fi}
 %    \end{macrocode}
+% \end{macro}
 % Ok, so here is the magic glue calculator.  |#1| and~|#2| give the
 % range over which the preceding line changes from `short' to `long'.
 % |#3| and |#4| give the range over which the current line changes
@@ -630,96 +773,44 @@
     \@firstoftwo
   \fi\fi
   \reserved@b}
-%    \end{macrocode}
-% Here is the deal with master and slave ids:  each footnote has a
-% unique master id.  This master id is also what is recorded in the
-% mark \cmd{\FN@master} in the footnote box itself, and in the mark
-% \cmd{\FN@slave} at the point of its mark.  At the point where a
-% \cmd{\FN@master} mark is placed, a default \cmd{\FN@slave} mark is
-% placed also with an id that is one less than any subordinate
-% footnote ids so that one can distinguish any split off subordinate
-% footnotes.  It must be noted that this sentinel slave id will
-% be the valid id of a completely unrelated footnote!  Since the
-% value is only used for determining one end of an \emph{open}
-% interval of excluded ids, no harm results from that.
-% All subordinate footnotes are numbered sequentially in
-% the order of \emph{completion}, so that any subordinate footnotes
-% have lower ids than their master.
-%    \begin{macrocode}
-\def\FN@masterinsert{\@cclv}
 
-\newcount\FN@id
-\newmarks\FN@master
-\newmarks\FN@slave
-
-\global\let\FN@stacklist\@empty
-
-\def\DefineFootnoteStack#1{%
-  \global\expandafter\let\csname FN@stack@#1\endcsname\@empty
-  \@cons\FN@stacklist{{#1}}%
-}
-
-\AtEndDocument{\FN@checkstacklist}
-
-\def\FN@checkstacklist{{\let\@elt\FN@checkstack
-  \FN@stacklist}}
-
-\def\FN@checkstack#1{{\let\@elt\FN@checkstackentry
-    \csname FN@stack#1@\endcsname}}
-
-\def\FN@checkstackentry#1#2#3{%
-  \PackageError{bigfoot}{Unfinished #1 #2 from line #3}%
-  {The specified footnote range is uncomplete}}
-
-\def\PushFootnoteMark#1{{\let\@elt\relax
-  \expandafter\unrestored@protected@xdef \csname FN@stack@#1\endcsname
-  {\@elt{#1}{\@thefnmark}{\number\inputlineno}\csname
-  FN@stack@#1\endcsname}}}
-
-\def\PopFootnoteMark#1{\expandafter
-  \ifx\csname FN@stack@#1\endcsname\@empty
-    \PackageError{bigfoot}{Empty footnote stack #1}%
-    {The specified footnote type has no uncompleted range}%
-  \else
-  {\let\@elt\FN@firstpop
-    \iffalse{\fi\csname FN@stack@#1\endcsname}}\fi}
-
-\def\FN@firstpop#1#2#3{\protected@xdef\@thefnmark{#2}%
-  \let\@elt\relax
-  \expandafter\protected@xdef\csname FN@stack@#1\endcsname{%
-    \iffalse}\fi}
+\newcounter{FN@totalid}
+\MakeSorted{FN@totalid}
 
 \def\FN@fnoteplain{\FN@fnotecommon\vbox}
 \def\FN@fnotepara{\FN@fnotecommon\hbox}
 
+\def\FN@masterinsert{\@cclv}
+%    \end{macrocode}
+% \begin{macro}{\FN@id}
+% \begin{macro}{\FN@master}
+% \begin{macro}{\FN@slave}
+% ^^A Is this still correct?
+%   Here is the deal with master and slave ids: each footnote has a
+%   unique master id.  This master id is also what is recorded in the
+%   mark \cmd{\FN@master} in the footnote box itself, and in the mark
+%   \cmd{\FN@slave} at the point of its mark.  At the point where a
+%   \cmd{\FN@master} mark is placed, a default \cmd{\FN@slave} mark is
+%   placed also with an id that is one less than the smallest id
+%   generated from a footnote that is a `descendent' of the current
+%   one.  This makes it possible to distinguish any split off
+%   subordinate footnotes.  It must be noted that this sentinel slave
+%   id will be the valid id of a completely unrelated footnote!  Since
+%   the value is only used for determining one end of an \emph{open}
+%   interval of excluded ids, this is no problem.  All subordinate
+%   footnotes are numbered sequentially in the order of
+%   \emph{completion}, so that any subordinate footnotes have lower
+%   ids than their master.
+%    \begin{macrocode}
+\newcount\FN@id
+\newmarks\FN@master
+\newmarks\FN@slave
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+%    \begin{macrocode}
 \let\FN@errorstack\@empty
-
-\def\FN@slotfreelist{}
-\def\FN@nextslot{1}
-
-\def\FN@newslot#1{%
-  \ifx\FN@slotfreelist\@empty
-    \edef#1{\FN@nextslot}%
-    \xdef\FN@nextslot{\number\numexpr \FN@nextslot+\@ne}%
-  \else
-    \let#1\FN@slotfreelist
-    \xdef\FN@slotfreelist{\csname FN@slot\FN@slotfreelist\endcsname}%
-  \fi
-%<trace>  \iffoottrace\message{^^JAllocated #1^^J}\fi
-}
-
-\def\FN@freeslot#1{%
-%<trace>  \iffoottrace\message{^^JFreeing #1^^J}\fi
-  \global\expandafter\let\csname FN@slot#1\endcsname=\FN@slotfreelist
-  \xdef\FN@slotfreelist{#1}}
-
-\def\FN@slotxdef#1{%
-  \global\expandafter\xdef\csname FN@slot#1\endcsname}
-
-\def\FN@slotget#1{\csname FN@slot#1\endcsname}
-
-\newcounter{FN@totalid}
-\MakeSorted{FN@totalid}
 
 \def\FN@fnotecommon#1#2#3{%
   \leavevmode
@@ -888,13 +979,24 @@
 \newbox\FN@insertions
 
 \def\MFL@showone#1#2{\message{Box #2:}\showbox#2%
-  \message{Cachebox #2:}\showbox\csname FN@cache\number#2\endcsname}
+  \message{Cachebox #2:}\showbox\FN@cache#2}
 \def\MFL@showall{{%
     \showboxbreadth=\maxdimen
     \showboxdepth=\tw@
     \tracingonline=\@ne
     \FN@nest@iterate\MFL@showone}}
-
+%    \end{macrocode}
+% \begin{macro}{\FN@retaindelayed}
+%   This is a complex macro that removes all boxes from the current
+%   list that are not to be kept for the next page.  The last such box
+%   gets its id placed into \cmd{\FN@tempinfo} if that's still empty.
+%   The slot specified by \cmd{\count@} is not freed when encountered,
+%   all others are freed upon removing the box.  The last box is
+%   returned in box~0 if any is retained.  The vertical list might
+%   have an unchecked part locked off in front by placing a
+%   \cmd{\nobreak} penalty there.  This penalty is removed, and the
+%   list before it not touched.
+%    \begin{macrocode}
 \def\FN@retaindelayed{%
   \setbox\z@\lastbox
   \ifcase
@@ -905,11 +1007,25 @@
     \ifnum\dp\z@=\count@\else \FN@freeslot{\number\dp\z@}\fi
     \FN@retaindelayed
   \or  {\FN@retaindelayed \nointerlineskip \box\z@}%
-  \else \unskip
+  \else \unpenalty \setbox\z@\lastbox
   \fi}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\MFL@processplain}
+%   This gets called for actually inserting the processed material
+%   into the footnote box.  The current state of affairs is that
+%   \cmd{\FN@config} contains all footnotes that should get
+%   transferred to the next page completely.  The cache boxes contain
+%   the collected and typeset footnotes for typesetting on the current
+%   page.
+%
+%   The structure of a cachebox is currently as follows: it is filled
+%   with vboxes containing the arranged material, optionally followed
+%   by another box to be carried over to the next page flagged with a
+%   \cmd{\nobreak} penalty.
+%    \begin{macrocode}
 \def\MFL@processplain#1{%
-   \ifvoid\csname FN@cache\number#1\endcsname
+   \ifvoid\FN@cache#1%
      \global\setbox\FN@tempbox\vbox\bgroup
        \unvbox#1%
        \count@\z@
@@ -921,7 +1037,7 @@
      \expandafter\expandafter
    \fi\iffalse\fi
    \global\setbox#1\vbox\bgroup%
-     \unvbox\csname FN@cache\number#1\endcsname
+     \unvbox\FN@cache#1%
      \ifnum\lastpenalty>\z@
        \unpenalty
        \setbox\z@\lastbox
@@ -931,10 +1047,9 @@
      \count@\dp\z@
      \global\setbox\FN@tempbox\vbox\bgroup
        \box\z@
-       \vskip\z@skip
+       \nobreak
        \unvbox#1%
        \let\@elt\FN@removecheck \FN@retaindelayed
-       \ifvoid\z@ \setbox\z@\lastbox \fi
        \ifvoid\z@ \egroup \MFL@removevboxes\egroup
        \else \nointerlineskip \box\z@ \egroup
          \MFL@removevboxes \egroup
@@ -944,6 +1059,7 @@
 \let\MFL@processpara\MFL@processplain
 
 %    \end{macrocode}
+% \end{macro}
 % Ok, here is the bit about the caches: whenever we encounter a new
 % configuration, we have to first update the caches since we don't
 % know the sizes we are dealing with regarding the new configuration
@@ -1079,7 +1195,7 @@
 \skip\FN@savebox\z@skip
 \global\setbox\FN@savebox\box\voidb@x
 
-\expandafter\let\csname FN@cache\number\FN@savebox\endcsname\@cclv
+\expandafter\expandafter\expandafter\let\FN@cache\FN@savebox=\@cclv
 
 \expandafter\def\csname FN@ht\number\FN@savebox\endcsname{\topskip}%
 \expandafter\def\csname FN@dp\number\FN@savebox\endcsname{\maxdepth}
@@ -1090,8 +1206,8 @@
   \nointerlineskip\box#2\penalty#2\fi}
 
 \def\FN@sweepcachebox#1#2{\nointerlineskip
-  \box\csname FN@cache\number#2\endcsname
-  \penalty\csname FN@cache\number#2\endcsname\relax}
+  \box\FN@cache#2%
+  \penalty\FN@cache#2}
 
 \def\FN@removecheck#1#2{%
   \ifnum#1<\FN@slotget{\number\dp\z@}
@@ -1245,7 +1361,7 @@
   \gdef\FN@config{}%
   \FN@nest@iterate\FN@sortinsert
   \FN@nest@iterate\FN@regeneratecache
-  \FN@nest@iterate{\FN@insertouterspace\global\FN@vsize\dimexpr\z@}
+  \FN@nest@iterate{\FN@insertouterspace\global\FN@vsize\dimexpr\z@}%
   \FN@nest@iterate{\FN@cachesize\skip@\glueexpr\z@skip}%
   \global\advance\FN@vsize\glueexpr\FN@outervsize-\skip@\relax
   \ifcase
@@ -1468,7 +1584,7 @@
   {\hfuzz\maxdimen\hbadness\maxdimen\setbox\z@\hbox to\z@{\hskip-#1}}}
 
 \def\FN@newlevel#1#2#3\FN@mainsplitreturn{%
-  \count@\csname FN@cache\number#2\endcsname
+  \count@\FN@cache#2%
   \ifvoid\count@
 %     \message{Page=\thepage #2 is empty, recursing with
 %   \the\FN@vsize^^J}%
@@ -1615,7 +1731,7 @@
 %    \begin{macrocode}
   \ifnum\FN@badness<\FN@bestebadness
 %    \end{macrocode}
-%          are we overfull?  If so, recurse once for getting better.
+% are we overfull?  If so, recurse once for getting better.
 %    \begin{macrocode}
     \ifdim\FN@myvsize<\z@
       \advance\FN@myvsize-\dimexpr
@@ -1993,7 +2109,7 @@
 %   to \cmd{\FN@vsize}.
 %    \begin{macrocode}
 \def\FN@reconfig#1#2{\ifvoid#2\else
-  \count@\csname FN@cache\number#2\endcsname
+  \count@\FN@cache#2%
   \ifvoid\count@\else
     \global\advance\FN@vsize
       \glueexpr(\ht\count@+\dp\count@)*\count#2/\@m+\skip#2\relax
