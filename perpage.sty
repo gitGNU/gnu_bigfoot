@@ -1,4 +1,4 @@
-% $Id: perpage.sty,v 1.5 2004/02/22 01:43:16 dak Exp $
+% $Id: perpage.sty,v 1.6 2004/03/29 01:53:27 dak Exp $
 % Copyright 2002, 2003, 2004 David Kastrup <dak@gnu.org>
 % Licence: GPL version 2 or later
 %
@@ -13,17 +13,18 @@
 %   |\MakePerPage[2]{footnote}|
 % \end{quote}
 % will start footnote numbers with 2 on each page (the optional
-% argument defaults to~1).  2~might be a strange number, unless
-% you have used something like 
+% argument defaults to~1).  2~might be a strange number, unless you
+% have used something like
 % \begin{quote}
 %   \renewcommand\thefootnote{\fnsymbol{footnote}}
 % \end{quote}
 % and want to start off with a dagger.  This may need multiple passes
 % to work: \LaTeX\ will complain about changed labels if you need
-% another pass.  It is also noteworthy that it might be a good idea
-% to redefine |\@cnterr| if you do that: on the first pass, footnotes
-% are not reset per page and things like |\fnsymbol| will quickly
-% exhaust the valid ranges.
+% another pass.  It is also noteworthy that it might be a good idea to
+% redefine |\@cnterr| if you do that: on the first pass, footnotes are
+% not reset per page and things like |\fnsymbol| will quickly exhaust
+% the valid ranges.
+%
 % \StopEventually{}
 %
 % It works in the following manner: The basic work is done through
@@ -47,7 +48,8 @@
 % \begin{itemize}
 % \item The absolute counter id.
 % \item The current scope id.
-% \item Its starting value.
+% \item The scope's starting value.
+% \item The absolute counter id of a superior counter.
 % \end{itemize}
 %
 % Sorted counters work by writing out the current absolute id and
@@ -60,7 +62,18 @@
 % scope and initial value for the scope.  Scope changes when a value
 % assigned from the file differs from the `natural' value.  When the
 % file is read in, counter movements are tracked.  Each counter that
-% does not have its `natural' value
+% does not have its `natural' value, is having a counter setting
+% recorded.
+%
+% A count group is determined by the current set of contiguous
+% counting values in input order.  It is identified by the
+% corresponding absolute counting value.
+
+
+%
+% Counters can be reset on changes of an ``output assigned'' variable
+% like the page counter.  For example, if one has a footnote and
+% subfootnote counting scheme, then subnotes will usually be 
 
 
 
@@ -86,8 +99,47 @@
 
 \NeedsTeXFormat{LaTeX2e}
 \def\next$#1: #2 #3${#2}
-\ProvidesPackage{perpage}[\next$Date: 2004/02/22 01:43:16 $
-  v\next$Revision: 1.5 $ Reset/sort counters per page]
+\ProvidesPackage{perpage}[\next$Date: 2004/03/29 01:53:27 $
+  v\next$Revision: 1.6 $ Reset/sort counters per page]
+
+\newcommand\AddAbsoluteCounter[1]
+{\@ifundefined{c@abs#1}{%
+    \expandafter\newcount\csname c@abs#1\endcsname
+    \global\value{abs#1}\@ne
+    \global\expandafter\let\csname cl@abs#1\endcsname\@empty
+    \expandafter\xdef\csname theabs#1\endcsname{%
+      \noexpand\number \csname c@abs#1\endcsname}%
+    \global\@namedef{c@pabs@#1}{\z@=\z@{%
+        \stepcounter{abs#1}%
+        \afterassignment}\count@}%
+    \@addtoreset{pabs@#1}{#1}}{}}
+
+\def\theabspage{\ifx\thepage\relax
+    \noexpand\theabspage
+  \else
+    \number\c@abspage
+  \fi}
+
+\AddAbsoluteCounter{page}
+
+% \cmd{\MakeSorted} works by mapping absolute numbers to absolute
+% numbers.  There can be a superior counter given that will cause a
+% reset when changed (this works in a completely different way than
+% the usual manner: the respective corresponding absolute counter
+% value gets written out to the file.  All inferior counter values
+% sharing the same superior absolute counter value are mapped to the
+% range $[1..\infty)$.  In addition, we introduce counter set
+% groups.  Whenever a counter is found to have an unexpected value
+% (namely, not being reset when its superior counter is reset, or
+% being incremented when the superior counter has not been touched),
+% we record a new `set group' with the corresponding value.
+% Unexpected values are checked for before counter values from the
+% |.aux| file are consulted.
+% For now we don't do much here.  We write out a label
+
+%\newcommand\MakeSorted[2][\@ne]{
+
+
 
 \newcommand*\MakePerPage[2][\@ne]{%
   \pp@makeperpage{#2}\c@pchk@{#1}}
@@ -110,13 +162,6 @@
   \AtBeginDocument{\setcounter{pp@a@#1}\z@}%
   \edef\next{\noexpand\AtEndDocument{\noexpand\setcounter{pp@a@#1}{\arabic{pp@a@#1}}}}\next}
 
-\newcommand*\StepCounterWith[2]{%
-  \global\@namedef{c@pcha@#1}{\z@=\z@{\stepcounter{#1}%
-    \afterassignment}\count@}%
-  \@addtoreset{pcha@#1}{#2}}
-
-\gdef\pp@page{}
-
 \def\pchk@vlist{%
   \ifvmode\ifdim\prevdepth=-1000\p@\ifdim\lastskip=\z@\ifdim\lastpenalty=\z@
   \PackageWarning{perpage}{\string\stepcounter\space probably at start of
@@ -127,30 +172,33 @@
   \csname pp@r@#1@\arabic{pp@a@#1}\endcsname
   \@empty}
 
-\def\pp@fetchctrii#1#2{\xdef\pp@label{#1}%
-  \xdef\pp@page{#2}}
+\def\pp@fetchctrii#1#2{\edef\pp@label{#1}%
+  \edef\pp@page{#2}}
 
-\def\pp@pagectr#1#2#3{\addtocounter{pp@a@#1}\@ne
-  \edef\next{\noexpand
-    \@newl@bel{pp@r@#1}{#2}{{\arabic{pp@a@#1}}{#3}}}\next}
-
-\def\pp@ppagectr#1#2#3{%
-  \def\next{#3}%
-  \ifx\next\pp@page
+\def\pp@pagectr#1#2#3{\@ifundefined{c@pp@a@#1}{}{%
     \addtocounter{pp@a@#1}\@ne
-  \else
-    \setcounter{pp@a@#1}{\value{pp@r@#1}}%
-  \fi
-  \global\let\pp@page\next
-  \edef\next{\noexpand
-    \@newl@bel{pp@r@#1}{#2}{{\arabic{pp@a@#1}}{#3}}}\next}
+    \edef\next{\noexpand
+      \@newl@bel{pp@r@#1}{#2}{{\arabic{pp@a@#1}}{#3}}}\next}}
+
+\def\pp@ppagectr#1#2#3{\@ifundefined{c@pp@a@#1}{}{%
+    \def\next{#3}%
+    \expandafter\ifx\csname pp@page@#1\endcsname\next
+      \addtocounter{pp@a@#1}\@ne
+    \else
+      \setcounter{pp@a@#1}{\value{pp@r@#1}}%
+    \fi
+    \global\expandafter\let\csname pp@page@#1\endcsname\next
+    \edef\next{\noexpand
+      \@newl@bel{pp@r@#1}{#2}{{\arabic{pp@a@#1}}{#3}}}\next}}
 
 
 \def\pp@writectr#1#2{\edef\next{%
     \string#1{#2}{\arabic{pp@a@#2}}{\noexpand\thepage}}%
   \pchk@vlist
+  \dimen@=\lastkern
+  \ifdim\dimen@=\z@ \else \unkern\fi
   \protected@write\@auxout{}{\next}%
-  \nobreak
+  \ifdim\dimen@=\z@ \nobreak \else \kern\dimen@\fi
   \afterassignment\endgroup\count@}
 
 \def\c@pchk@#1{\z@=\z@
@@ -163,14 +211,13 @@
   \else
     \setcounter{#1}{\value{pp@r@#1}}%
   \fi
-  \xdef\pp@label{\arabic{#1}}%
   \pp@writectr\pp@pagectr{#1}}
 
 \def\c@schk@#1{\z@=\z@
   \begingroup
   \addtocounter{pp@a@#1}\@ne
   \pp@fetchctr{#1}%
-  \ifx\pp@page\@empty \xdef\pp@label{\arabic{#1}}%
+  \ifx\pp@page\@empty
   \else \setcounter{#1}{\pp@label}\fi
   \pp@writectr\pp@pagectr{#1}}
 
@@ -178,7 +225,7 @@
   \begingroup
   \addtocounter{pp@a@#1}\@ne
   \pp@fetchctr{#1}%
-  \ifx\pp@page\@empty \xdef\pp@label{\arabic{#1}}%
+  \ifx\pp@page\@empty
   \else \setcounter{#1}{\pp@label}\fi
   \pp@writectr\pp@ppagectr{#1}}
 
