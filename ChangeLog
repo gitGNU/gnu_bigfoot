@@ -1,3 +1,11 @@
+2004-11-09  David Kastrup  <dak@gnu.org>
+
+	* suffix.dtx: Remove driver file here, it is in bigfoot.drv now.
+
+	* bigfoot.dtx: new file with history from bigfoot.sty.
+
+	* bigfoot.sty: removed.
+
 2004-03-29  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.sty: Stop relying on \pp@label.
