@@ -1,0 +1,30 @@
+2004-03-22  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.sty: Rely on perpage.sty for a general sorted counter
+	FN@totalid.
+	Fix calculation of sort criterion.
+	Adjust listdepth and itemdepth to zero within footnotes.
+	Fix restoration of \reset@color and ilk.
+
+2004-03-18  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.sty: Remove a significant space in \FN@magicglue
+	calculation.
+	In \FN@fnotecommon, move line size recordings to after
+	\@makefntext had a chance to change them.
+
+2004-03-16  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.sty: Use a penalty based model for evaluating total
+	badness.  Basically helps to avoid lots of widows.
+
+2004-03-14  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.sty: Declare compatibility options `para', `para*' and
+	`ruled'.
+	Allow for \@preparefnhtext to be predefined.
+	Same for \@makefnvbox.
+	Use suffix.sty for \FootnoteSpecific.
+	Try rearranging Color tokens to allow for \normalcolor use.
+	If placing color setup tokens, keep original depth of box.
+
