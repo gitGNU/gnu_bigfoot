@@ -1,7 +1,7 @@
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/22 15:29:05 $
-  Version \FN@next $Revision: 1.9 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/22 18:58:40 $
+  Version \FN@next $Revision: 1.10 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J
@@ -68,25 +68,42 @@
 
 \long\def\MFL@mpinsert#1#2{%
   \global\setbox#1\vbox{%
-    \unvbox#1%\nointerlineskip
+    \unvbox#1%
+    \nointerlineskip
     \vbox{#2}%
   }%
+}
+
+\def\MFL@minipage{%
+  \ifinner\else
+    \let\MFL@mpinsertsave\MFL@insert
+    \MFL@reinsert \let\MFL@insert\MFL@mpinsert
+  \fi
 }
 
 % The trick is like with \cmd{\removehboxes}.
 \def\MFL@mpreinsert#1#2{%
   \ifvoid#2\else
-    \MFL@realinsert#2{\unvbox#2
+    \setbox\@tempboxa\vbox\bgroup\unvbox#2%
       \global\setbox#2\lastbox
-      \MFL@removevboxes}%
-    \ifvoid#2\else
-    \MFL@realinsert#2{\unvbox#2}%
+      \setbox\z@\lastbox
+      \ifvoid\z@
+        \egroup
+        \setbox\z@\box#2%
+      \else
+        \MFL@removevboxes \unvbox\z@
+        \egroup
+        \setbox\z@\box#2%
+        \MFL@mpinsertsave#2{\unvbox\@tempboxa}%
+      \fi
+    \ifvoid\z@\else
+      \MFL@mpinsertsave#2{\unvbox\z@}%
     \fi
   \fi}
 
-\def\MFL@removevboxes{\setbox\z@\lastbox
-  \ifvbox\z@{\MFL@removevboxes}\fi
-  \unvbox\z@}
+\def\MFL@removevboxes{{\setbox\z@\lastbox
+    \ifvbox\z@ \MFL@removevboxes \unvbox\z@\fi}}
+
 
 \def\MFL@startplain#1{\global\dimen#1\maxdimen
   \@cons\FN@nestlist{{}#1}%
