@@ -1,6 +1,7 @@
 2004-11-09  David Kastrup  <dak@gnu.org>
 
 	* suffix.dtx: Remove driver file here, it is in bigfoot.drv now.
+	Simplify banner creation.
 
 	* bigfoot.dtx: new file with history from bigfoot.sty.
 
