@@ -1,10 +1,7 @@
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/18 21:37:12 $
-  Version \FN@next $Revision: 1.8 $]%}
-
-% Make sure we get reasonable behavior also in the absence of perpage.sty
-\ifx\@undefined\pp@label \def\pp@label{1} \fi
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2004/03/22 15:29:05 $
+  Version \FN@next $Revision: 1.9 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J
@@ -33,6 +30,9 @@
 \RequirePackage{etex}
 \RequirePackage{suffix}
 \RequirePackage{perpage}
+
+\newcounter{FN@totalid}
+\MakeSorted{FN@totalid}
 
 % We need the appropriate splitting parameters set for the footnote
 % again.  \MFL@realinsert does that, but it has the disadvantage that
@@ -489,10 +489,11 @@
 \def\FN@fnotecommon#1#2#3{%
   \NCC@makemark{#3}%
   \ifnum#2<\FN@masterinsert
+    \stepcounter{FN@totalid}%
     \FN@colorstackbgroup\MFL@minipage
     \FN@newslot\FN@masterslot
     \count@\FN@id
-    \dimen@=\numexpr64*\FN@masterinsert-\pp@label sp
+    \dimen@=\dimexpr64\p@*\FN@masterinsert-\pp@label sp\relax
     \def\FN@masterinsert{#2}%
     \edef\FN@errorstack{\FN@errorstack^^J%
 \FN@masterinsert\space entered in line \number\inputlineno}%
@@ -507,6 +508,8 @@
       \normalfont\footnotesize
       \interlinepenalty\interfootnotelinepenalty
       \hsize\MFL@columnwidth \@parboxrestore
+      \let\@listdepth\@mplistdepth \@mplistdepth\z@
+      \@itemdepth\z@ \@enumdepth\z@
       \protected@edef\@currentlabel{\@thefnmark}%
       \ifx\FN@boxtype\vbox \noindent
       \else \FN@specific{#2}\@preparefnhtext
@@ -594,9 +597,9 @@
   \fi}
 
 \def\FN@color@begingroup{%
-  \let\color@reset@color\FN@@color@reset@color
+  \let\reset@color\FN@@reset@color
   \let\color@begingroup\FN@@color@begingroup
-  \let\color@set@color\FN@@color@setcolor
+  \let\set@color\FN@@set@color
   \color@begingroup}
 
 \def\FN@set@color{\FN@@set@color
