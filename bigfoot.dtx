@@ -97,8 +97,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/03/15 23:18:29 $
-  Version \FN@next $Revision: 1.6 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/04/21 22:11:06 $
+  Version \FN@next $Revision: 1.7 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -278,7 +278,8 @@
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\MFL@removevboxes}
-% The trick is like with \cmd{\removehboxes}.
+%   The trick is like with \cmd{\removehboxes} in the \TeX book's
+%   appendix~D.
 %    \begin{macrocode}
 \def\MFL@removevboxes{{\setbox\z@\lastbox
     \ifvbox\z@ \MFL@removevboxes \unvbox\z@\fi}}
@@ -708,7 +709,9 @@
 \footnoteclubpenalty=250
 \newcount\finalfootnotewidowpenalty
 \finalfootnotewidowpenalty=4000
-
+%    \end{macrocode}
+% \begin{macro}{\@makefnvbox}
+%    \begin{macrocode}
 \ifx\@makefnvbox\@undefined
   \def\@makefnvbox#1{\vbox{%
       \@makefnstartbox
@@ -722,8 +725,8 @@
 
 \def\hfootfraction{0.9}
 \def\vtypefraction{0.6}
-
 %    \end{macrocode}
+% \end{macro}
 % \begin{macro}{\FN@assembleboxes}
 %   This will produce the finished product, by generating all boxes
 %   (not yet unpacked in order not to make the |\lastbox| operation
@@ -756,7 +759,7 @@
     \global\setbox\FN@tempbox\copy\tw@
     \setbox\z@\@makefnvbox{%
       \global\setbox\FN@tempbox
-      \hbox{\unhbox\FN@tempbox\setbox\z@\lastbox\FN@removehboxes}%
+      \hbox{\unhbox\FN@tempbox\setbox\z@\lastbox\FN@joinhboxes}%
       \unhbox\FN@tempbox}%
     \ifdim\FN@vfound>\dimexpr\vtypefraction\p@*\FN@found\relax
       \ifdim\dimexpr \ht\z@+\dp\z@>\hfootfraction\dimen@ii
@@ -764,7 +767,7 @@
         \setbox\z@\@makefnvbox{\let\@makefnbreak\break
           \global\setbox\FN@tempbox
           \hbox{%
-            \unhbox\FN@tempbox\setbox\z@\lastbox\FN@removehboxes}%
+            \unhbox\FN@tempbox\setbox\z@\lastbox\FN@joinhboxes}%
           \unhbox\FN@tempbox}%
       \fi
     \fi
@@ -845,13 +848,13 @@
   {\footnotesep+\dp\strutbox+2\baselineskip}{-200}{-12000}}
 %    \end{macrocode}
 % \end{macro}
-% \cmd{\FN@removehboxes} is called with box~0 set to the next box to
+% \cmd{\FN@joinhboxes} is called with box~0 set to the next box to
 % be appended to the current list (all preceding hboxes on the
 % current list will have to go in front).
 %    \begin{macrocode}
-\def\FN@removehboxes{%
+\def\FN@joinhboxes{%
   \begingroup\setbox\z@\lastbox
-    \ifhbox\z@\FN@removehboxes
+    \ifhbox\z@\FN@joinhboxes
       \endgroup
       \nobreak\hskip\parfillskip
       \@makefnbreak
@@ -1429,6 +1432,30 @@
   \FN@nestlist
   \let\@elt\FN@eltsave}
 %    \end{macrocode}
+%
+% \subsection{The output routine stuff}
+%
+% \paragraph{Marks}
+% \begin{macro}{\FN@allmarks}
+%    \begin{macrocode}
+\def\FN@allmarks#1{\expandafter\@elt\expandafter{\number#1}%
+  \ifnum#1<\count266
+    \FN@allmarks{\numexpr#1+\@ne}%
+  \fi}
+%    \end{macrocode}
+%   
+% \end{macro}
+%    \begin{macrocode}
+\def\FN@sweepmarks#1#2{{\def\@elt##1{\noexpand\marks##1{#2##1}}%
+  \xdef#1{\FN@allmarks\z@}}}
+%    \end{macrocode}
+
+
+
+
+
+
+
 % This is our own output routine that does all the balancing stuff.
 % If we receive a forced penalty here, we must not do any of our
 % output processing on our own unless this is the choice of the
