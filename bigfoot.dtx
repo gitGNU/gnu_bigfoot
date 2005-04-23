@@ -97,8 +97,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/04/21 22:11:06 $
-  Version \FN@next $Revision: 1.7 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/04/23 19:35:24 $
+  Version \FN@next $Revision: 1.8 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -623,9 +623,6 @@
 %   This just completely voids a cache register.
 %    \begin{macrocode}
 \def\FN@clearcache#1#2{%
-%<trace>  \ifvoid#2\else \errmessage{Unused insertion: #2}%
-%<trace>  {\showboxbreadth400 \showboxdepth4 \tracingonline\@ne
-%<trace>  \showbox#2}\fi
   \global\setbox\FN@cache#2=\box\voidb@x}
 %    \end{macrocode}
 % \end{macro}
@@ -962,7 +959,8 @@
       \@makefnstartbox
       \let\@listdepth\@mplistdepth \@mplistdepth\z@
       \@itemdepth\z@ \@enumdepth\z@
-      \protected@edef\@currentlabel{\@thefnmark}%
+      \protected@edef\@currentlabel{\csname p@footnote%
+         \expandafter\FN@stripfootins\string#2\endcsname\@thefnmark}%
       \ifx\FN@boxtype\vbox \noindent
       \else \FN@specific{#2}\@preparefnhtext
       \fi
