@@ -97,8 +97,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/04/23 19:35:24 $
-  Version \FN@next $Revision: 1.8 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/06/27 22:40:27 $
+  Version \FN@next $Revision: 1.9 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -1434,6 +1434,7 @@
 % \subsection{The output routine stuff}
 %
 % \paragraph{Marks}
+% This is used for sweeping all marks up for reinsertion.
 % \begin{macro}{\FN@allmarks}
 %    \begin{macrocode}
 \def\FN@allmarks#1{\expandafter\@elt\expandafter{\number#1}%
@@ -1441,18 +1442,17 @@
     \FN@allmarks{\numexpr#1+\@ne}%
   \fi}
 %    \end{macrocode}
-%   
 % \end{macro}
+% \begin{macro}{\FN@sweepmarks}
+%   This gets two arguments.  The first argument gives a control
+%   sequence name where the marks get stored, the second tells what
+%   kind of marks to sweep, like |\firstmarks|.
 %    \begin{macrocode}
-\def\FN@sweepmarks#1#2{{\def\@elt##1{\noexpand\marks##1{#2##1}}%
-  \xdef#1{\FN@allmarks\z@}}}
+\def\FN@sweepmarks#1#2{{\def\@elt##1{\marks##1{\unexpanded
+        \expandafter{#2##1}}}%
+    \xdef#1{\FN@allmarks\z@}}}
 %    \end{macrocode}
-
-
-
-
-
-
+% \end{macro}
 
 % This is our own output routine that does all the balancing stuff.
 % If we receive a forced penalty here, we must not do any of our
@@ -1470,6 +1470,17 @@
 % for a regular page (after splitting off the necessary material for
 % the next page).  We then reinsert the remaining split insertions,
 % any possibly split off page material and the penalty.
+%
+% \TeX is rather monotonous in its page break processing.  Increase
+% the available page size, and the available page material will also
+% increase.  There is a singular exception to that rule, and that are
+% split and floating insertions.  However, we notice their presence by
+% a non-zero setting of \cms{\insertpenalties}, and we can just
+% measure the material that they have taken up in a forced pass of the
+% output routine, adding that much to our request size.  However, this
+% operation will change the penalties associated with the page breaks.
+
+%
 % Unfortunately, this is not sufficient: the penalty might have been
 % inserted with a box immediately preceding it.  In that case the
 % penalty would have been guaranteed to eventually turn up in the
@@ -1485,10 +1496,6 @@
 % own.  If the regular output routine failed to ship out the prepared
 % insertions, we just keep the original data either in their boxes or
 % in a reinserted insertion.
-
-% What we actually do for this reason is
-% to do all the necessary calculations and store the result in the box
-% |\FN@processedboxes|.  They will then be inserted
 
 % It hides the relevant information from the `real' output routine
 % until such a time that we have enough material gathered to produce a
@@ -1524,10 +1531,17 @@
 \output{%
 %  \ifnum\c@page=10 \traceon\fi
   \ifvoid\FN@savebox
+    \FN@sweepmarks\FN@topmarks\topmarks
+    \FN@sweepmarks\FN@firstmarks\firstmarks
     \global\FN@outervsize\ht\@cclv\relax
     \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
     \global\advance\FN@outervsize-\ht\@cclv\relax
   \else
+%    \end{macrocode}
+% We now are in the situation that we already have collected material
+% previously.  We note the natural size of the added material and
+% subtract it from the remaining area on the page.
+%    \begin{macrocode}
     \dimen@\ht\@cclv
     \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
     \global\advance\FN@outervsize\dimexpr\dimen@-\ht\@cclv\relax
@@ -1537,7 +1551,8 @@
 %    \begin{macrocode}
     \FN@nest@iterate\FN@maybeinvalidatecache
 %    \end{macrocode}
-% We now update all boxes with the new data we collected    
+% We now update all boxes by inserting the previously collected
+% material in front of the boxes.
 %    \begin{macrocode}
     \vskip\z@skip
     \unvbox\FN@savebox
@@ -1548,23 +1563,46 @@
       \setbox\z@\lastbox
       \global\setbox\count@\vbox{\unvbox\z@\unvbox\count@}%
     \repeat
+%    \end{macrocode}
+% Note that \cmd{\FN@vsadjustlist} will restore the previous value of
+% \cmd{\outputpenalty}.  So we need to save it.
+%    \begin{macrocode}
     \count@\outputpenalty
     \FN@vsadjustlist
     \ifnum\count@=-13749
 %<trace> \if\foottrace8\message{receiving special penalty}\fi
+%    \end{macrocode}
+% This special penalty means that we have been collecting floated
+% insertions right now.  So |\box255| is actually empty.  We restore
+% the old box into it.
+%    \begin{macrocode}
       \global\setbox\@cclv\lastbox
       \unskip
 %<trace>  \ifnum\lastnodetype>\m@ne
 %<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
-      \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
-      \pagediscards
-      \global\outputpenalty\@M
+%    \end{macrocode}
+% If the previous output penalty had been a forced penalty, we would
+% like to repeat it?!?  This does not look plausible.
+% \cmd{\pagediscards} should be empty, and the old outputpenalty, if
+% anywhere, should appear at the bottom of the old box, not the
+% current list.
+%    \begin{macrocode}
+%      \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
+%      \pagediscards
+%      \global\outputpenalty\@M
     \else
       \setbox\z@\lastbox
       \unskip
 %<trace>  \ifnum\lastnodetype>\m@ne
 %<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
       \dimen@\dimexpr\ht\z@+\ht\@cclv
+%    \end{macrocode}
+% Ok, now we reconstruct the box from its parts.  The page
+% calculations have registered the heights of both boxes as being
+% taken from the available size, so we add both of those heights back
+% in.  Then we add the material together, taking the previous output
+% penalty and the current page discards for glueing the stuff together.
+%    \begin{macrocode}
       \global\setbox\@cclv\vbox{\unvbox\z@
         \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
         \pagediscards\unvbox\@cclv
@@ -1613,34 +1651,12 @@
     \FN@nest@iterate\FN@clearcache
   \or
 %    \end{macrocode}
-% we need additional material
+% We need additional material.  Of every nonempty box, we record its
+% skip value to be able to restore it later.  We then clear all the
+% skip values for nonempty boxes, since they need not be considered
+% again.
 %    \begin{macrocode}
-    {\let\@elt\FN@recordinsertparam
-     \xdef\FN@vsadjustlist{\global\vsize=\the\vsize
-       \global\topskip=\the\topskip
-       \global\outputpenalty=\the\outputpenalty\relax
-       \FN@list}%
-     \let\@elt\FN@clearinsertparam
-     \FN@list}%
-    \global\topskip-\maxdimen\relax
-    \dimen@\ht\@cclv
-    \global\setbox\FN@savebox\vbox{%
-      \box\@cclv
-      \FN@list@iterate\FN@sweepbox}%
-    \ifdim\FN@vsize<\glueshrink\FN@vsize
-      \ifdim\dimen@>\z@
-%<trace> \if\foottrace8\message{sending special penalty}\fi%
-        \hrule\@height\z@\@depth\z@
-        \penalty -13749
-        \global\vsize=0.5\maxdimen
-      \else
-        \global\vsize=3\normalbaselineskip
-      \fi
-    \else
-      \global\vsize=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
-    \fi
-    \global\advance\FN@outervsize-\vsize\relax
-    \global\deadcycles\z@
+    \FN@restartoutput
   \else
 %    \end{macrocode}
 % Fake our output box into something looking like a cache box
@@ -1701,6 +1717,43 @@
     \FN@nest@iterate\FN@clearcache
   \fi}
 %    \end{macrocode}
+% \begin{macro}{\FN@restartoutput}
+%    \begin{macrocode}
+\def\FN@restartoutput{%  
+  {\let\@elt\FN@recordinsertparam
+   \xdef\FN@vsadjustlist{\global\vsize=\the\vsize
+     \global\topskip=\the\topskip
+     \global\outputpenalty=\the\outputpenalty\relax
+     \FN@list}%
+   \let\@elt\FN@clearinsertparam
+   \FN@list}%
+  \global\topskip-\maxdimen\relax
+  \dimen@\ht\@cclv
+  \global\setbox\FN@savebox\vbox{%
+    \box\@cclv
+    \FN@list@iterate\FN@sweepbox}%
+  \ifdim\FN@vsize<\glueshrink\FN@vsize
+    \ifdim\dimen@>\z@
+%<trace> \if\foottrace8\message{sending special penalty}\fi%
+      \hrule\@height\z@\@depth\z@
+      \penalty -13749
+      \global\vsize=0.5\maxdimen
+    \else
+      \global\vsize=3\normalbaselineskip
+    \fi
+  \else
+    \global\vsize=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
+  \fi
+  \global\advance\FN@outervsize-\vsize\relax
+  \global\deadcycles\z@
+  \FN@firstmarks
+  \FN@sweepmarks\FN@botmarks\botmarks
+  \FN@botmarks}
+%    \end{macrocode}
+% \end{macro}
+
+
+
 % Ok, here is the deal.  If the \cmd\FN@truevsize is negative, we have
 % an overfull vbox at our hand.  We then start the splitting action.
 % We take the first non-split lowest footnote block and split it to

@@ -1,3 +1,8 @@
+2005-06-28  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx (\FN@sweepmarks): do mark sweeping.
+	(\FN@restartoutput): factor out.
+
 2005-04-23  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx (\FN@clearcache): Remove bogus error message.
