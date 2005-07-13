@@ -15,7 +15,7 @@
 %   page\footnoteB{like this one} can be anchored in an
 %   apparatus\footnote{The plural of ``apparatus'' is actually
 %     ``apparatus''\footnoteB{Well, actually ``apparat\=us'' with a
-%       long ``u'', but that's just obvious in spoken Latin.'}}
+%       long ``u'', but that's just obvious in spoken Latin.}}
 %   that is higher on the page.
 % \item The last footnote in each apparatus may be broken to the next
 %   page\footnote{This will probably be interesting for footnotes
@@ -97,8 +97,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/06/27 22:40:27 $
-  Version \FN@next $Revision: 1.9 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/07/13 05:28:01 $
+  Version \FN@next $Revision: 1.10 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -590,11 +590,12 @@
    \ifvoid#2%
      \box\voidb@x
    \else
-     \vbox{\unvcopy#2%
-       \setbox\z@\lastbox
-       \def\FN@masterinsert{#2}%
-       \FN@assembleboxes
-       \nointerlineskip \box\z@}%
+     \vbox{\vbox{\unvcopy#2%
+         \setbox\z@\lastbox
+         \def\FN@masterinsert{#2}%
+         \FN@assembleboxes
+         \global\setbox\FN@cache#2\box\z@}%
+       \nointerlineskip \box\FN@cache#2}%
     \fi}
 %    \end{macrocode}
 % \end{macro}
@@ -628,10 +629,18 @@
 % \end{macro}
 %
 % \begin{macro}{\@makefnvtext}
-% This takes a sequence of horizontally typeset footnotes and typesets
-% them in a single block.  To get correct indentation, it breaks
-% before the first footnote and adjusts the clubpenalties to move them
-% to one line lower effectively.
+%   Ok, this is one of the parts putting together footnotes in para
+%   mode.  The footnotes themselves have already been formatted into
+%   hboxes (placed there with \cmd{\@preparefnhtext} in order to cater
+%   for proper indentation).  \cmd{\@makefnvtext} then formats a
+%   single footnote block from horizontal mode pieces (vertical mode
+%   pieces are kept as-is).
+%   This takes text and typesets it in a single block.  To get correct
+%   indentation, it breaks before the first footnote and adjusts the
+%   clubpenalties to move them to one line lower effectively.
+%   \cmd{\@makefnvtext} is called in vertical mode, and its argument
+%   is typeset in horizontal mode right after a break, inside of
+%   \cmd{\@makefntext}.
 %    \begin{macrocode}
 \def\@makefnvtext#1{%
   \FN@specific\FN@masterinsert\@makefntext{%
@@ -640,13 +649,15 @@
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\@preparefnhtext}
-% This creates appropriate skips to be put before the horizontal
-% material to make the indentation correct with a breakpoint before
-% the footnote as well as when in run-in text.
+%   This creates appropriate skips to be put before the horizontal
+%   material to make the indentation correct with a breakpoint before
+%   the footnote as well as when in run-in text.  This is run once at
+%   the start of each horizontal mode footnote when it is first being
+%   typeset, in horizontal mode.
 %    \begin{macrocode}
 \ifx\@preparefnhtext\@undefined
 \def\@preparefnhtext{{%
-  \setbox\z@\hbox{\FN@specific\FN@masterinsert\@makefntext{%
+  \setbox\z@\vbox{\FN@specific\FN@masterinsert\@makefntext{%
       \unskip\unpenalty\setbox\z@\lastbox
       \dimen@
         \ifnum\parshape>\z@
@@ -664,12 +675,11 @@
   \FN@tempinfo}
 \fi
 %    \end{macrocode}
-% \end{macro}
-% Now we have in |\FN@tempinfo| the excess width of the label we
-% don't want to preserve when doing in-paragraph footnote setting.  A
+% Now we have in |\FN@tempinfo| the excess width of the label we don't
+% want to preserve when doing in-paragraph footnote setting.  A
 % sequence of glue before a label now has to consist of stuff that
-% vanishes at a breakpoint, followed by stuff that remains.
-% We have to have two behaviors for the contents: behavior one is
+% vanishes at a breakpoint, followed by stuff that remains.  We have
+% to have two behaviors for the contents: behavior one is
 % justification at the start of a line, behavior two is justification
 % in the line.  When we are at the start of the line, preceding
 % interword space disappears swallowed and so the natural criterion
@@ -679,14 +689,15 @@
 % packages specify a |\hangindent| (I~know of no examples where they
 % would actually set |\hangafter| to a value different from its
 % default of~1, or set |\hangindent| to e negative value which would
-% affect the right margin):  due to our artifical line at
-% the top, the indent will actually be active for the first line
-% already.  We back it out of the actual labels happening at the
-% start of the line.  Two-line parshapes have the same effect: the
-% first line is not actually used, and we put the relevant info for
-% the first line into the label.  Different right indentation for the
-% first line is something we can't simulate, but again, it should
-% occur rarely.  When |\parshape| is active, |\hangindent| is ignored.
+% affect the right margin): due to our artifical line at the top, the
+% indent will actually be active for the first line already.  We back
+% it out of the actual labels happening at the start of the line.
+% Two-line parshapes have the same effect: the first line is not
+% actually used, and we put the relevant info for the first line into
+% the label.  Different right indentation for the first line is
+% something we can't simulate, but again, it should occur rarely.
+% When |\parshape| is active, |\hangindent| is ignored.
+% \end{macro}
 %    \begin{macrocode}
 \def\@makefnstartbox{%
   \reset@font\footnotesize
@@ -697,8 +708,7 @@
   \advance\linepenalty500\relax}
 
 \def\@makefnendbox{%
-  \widowpenalty\FN@specific\FN@masterinsert\finalfootnotewidowpenalty
-  \unskip}
+  \widowpenalty\FN@specific\FN@masterinsert\finalfootnotewidowpenalty}
 
 \newcount\footnotewidowpenalty
 \footnotewidowpenalty=250
@@ -708,27 +718,45 @@
 \finalfootnotewidowpenalty=4000
 %    \end{macrocode}
 % \begin{macro}{\@makefnvbox}
+% This is the formatting code for a vertical mode footnote box.  It
+% uses \cmd{\@makefnstartbox} for setting up the initial widow/club
+% penalties, and \cmd{\@makefnendbox} for preparing the final end.  It
+% results in a vbox, but its argument, a stream of horizontal and
+% vertical material, is typeset in
 %    \begin{macrocode}
 \ifx\@makefnvbox\@undefined
   \def\@makefnvbox#1{\vbox{%
       \@makefnstartbox
-      \noindent
-      \rule\z@\footnotesep
+      \clubpenalties\tw@\@MM\clubpenalty
       \let\@thefnmark\@empty
-      \FN@specific\FN@masterinsert\@makefnvtext{#1}%
-      \@makefnendbox
-      \@finalstrut\strutbox}}
+      \FN@specific\FN@masterinsert\@makefntext{\rule\z@\footnotesep
+        \nobreak
+        #1\@finalstrut\strutbox
+      \@makefnendbox}}}
 \fi
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\hfootfraction}
+% \begin{macro}{\vtypefraction}
+%   Those parameters govern when a footnote block is going to be set
+%   completely in vertical mode.  If a footnote block does not shrink
+%   to less than \cmd{\hfootfraction} its size when using in-paragraph
+%   notes and, has at least \cmd{\vtypefraction} of forcedly vertical
+%   footnotes (specified as purely vertical, or vertical because of
+%   being large), it is set entirely in vertical mode.
+%
+%   In addition, the ratio of purely vertical footnotes must not fall
+%   below \cmd{\vtypefraction}.  If both of these conditions are
+%    \begin{macrocode}
 \def\hfootfraction{0.9}
 \def\vtypefraction{0.6}
 %    \end{macrocode}
 % \end{macro}
+% \end{macro}
 % \begin{macro}{\FN@assembleboxes}
 %   This will produce the finished product, by generating all boxes
-%   (not yet unpacked in order not to make the |\lastbox| operation
-%   inefficient as long as we may need it).  It is assumed that you
-%   have already set |\box\z@| to |\lastbox| before calling this
+%   and concatenating them except for the last vbox.  It is assumed
+%   that have already set |\box\z@| to |\lastbox| before calling this
 %   routine (or, more likely, have already assembled and split the
 %   last box).  The last, not yet unpacked |\vbox| is left in
 %   |\box\z@| on return.  The original id of the last box of a block
@@ -739,9 +767,11 @@
 %   that problem at a different point of time by checking the
 %   respective Ids when breaking a vbox into pieces: if the split
 %   piece does not contain the last footnote beginning, we switch to a
-%   slow motion decomposal.
+%   slow motion decomposal.  \cmd{\FN@assembleboxes} is supposed to be
+%   entered and exited in vertical mode.
 %    \begin{macrocode}
 \def\FN@assembleboxes{%
+%<trace> \ifhmode \PackageError{bigfoot}{Unexpected hmode}{}\fi
   \ifhbox\z@
     \dimen@\dp\z@
 %<trace> \MFL@checksinglebox\z@\z@{}{}%
@@ -752,20 +782,24 @@
       \setbox\z@\lastbox
     \ifhbox\z@
     \repeat
-    {\FN@assembleboxes\nointerlineskip\box\z@}%
+    {\FN@assembleboxes\nointerlineskip\unvbox\z@}%
+%    \end{macrocode}
+% At this point of time, |\box\tw@| contains a plain hbox with nothing
+% but the unadorned hboxes in horizontal mode to be joined into one
+% footnote block.  All preceding footnote blocks have been emptied
+% into the current vertical list.  We put the |\unvbox| operations in
+% a group so that the paragraph shapes will not get reset over the
+% break.
+%    \begin{macrocode}
     \global\setbox\FN@tempbox\copy\tw@
     \setbox\z@\@makefnvbox{%
-      \global\setbox\FN@tempbox
-      \hbox{\unhbox\FN@tempbox\setbox\z@\lastbox\FN@joinhboxes}%
-      \unhbox\FN@tempbox}%
+      {\unhbox\FN@tempbox}%
+      \setbox\z@\lastbox\FN@joinhboxes}%
     \ifdim\FN@vfound>\dimexpr\vtypefraction\p@*\FN@found\relax
       \ifdim\dimexpr \ht\z@+\dp\z@>\hfootfraction\dimen@ii
         \global\setbox\FN@tempbox\box\tw@
-        \setbox\z@\@makefnvbox{\let\@makefnbreak\break
-          \global\setbox\FN@tempbox
-          \hbox{%
-            \unhbox\FN@tempbox\setbox\z@\lastbox\FN@joinhboxes}%
-          \unhbox\FN@tempbox}%
+        \setbox\z@\@makefnvbox{\let\@makefnbreak\FN@pseudofillbreak
+            {\unhbox\FN@tempbox}\setbox\z@\lastbox\FN@joinhboxes}%
       \fi
     \fi
     \setbox\tw@\box\voidb@x
@@ -776,7 +810,7 @@
     \ifvbox\z@
 %<trace>  \MFL@checksinglebox\z@\z@{}{}%
       {\setbox\z@\lastbox
-      \FN@assembleboxes\nointerlineskip\box\z@}%
+      \FN@assembleboxes\nointerlineskip\unvbox\z@}%
     \fi
   \fi}
 %    \end{macrocode}
@@ -830,11 +864,30 @@
     \penalty\count@
     \hskip\glueexpr -\parfillskip+1em minus 0.5em\relax
   \else
-    \break
+    \FN@pseudobreak
   \fi
   \xdef\FN@found{\number\numexpr\FN@found+\@ne}%
 }
 %    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@pseudobreak}
+%   This ends a line, but without introducing parskip and similar.  It
+%   also `breaks in' the next line to get proper indentation.  The
+%   main difference with regard to \cmd{\break} is that this restarts
+%   the reckoning of line numbers for the sake of \cmd{\clubpenalty}
+%   calculation.
+%    \begin{macrocode}
+\def\FN@pseudobreak{%
+    {\parskip\z@skip\parfillskip\z@skip\parindent\z@\vadjust{}\par\noindent
+      \vadjust{\nobreak\vskip-\baselineskip}\nobreak\hfill\break}}      
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@pseudofillbreak}
+%   This is basically just for separating paragraphs by force.
+%    \begin{macrocode}
+\def\FN@pseudofillbreak{\nobreak\hskip\parfillskip\FN@pseudobreak}
+%    \end{macrocode}
+%   
 % \end{macro}
 % \begin{macro}{\@makefnbreak}
 %   This calculates the glue for the standard horizontal footnotes.
@@ -845,30 +898,59 @@
   {\footnotesep+\dp\strutbox+2\baselineskip}{-200}{-12000}}
 %    \end{macrocode}
 % \end{macro}
-% \cmd{\FN@joinhboxes} is called with box~0 set to the next box to
-% be appended to the current list (all preceding hboxes on the
-% current list will have to go in front).
+% \cmd{\FN@joinhboxes} is called with box~0 set to the next box to be
+% appended to the current list (all preceding hboxes on the current
+% vertical list will have to go in front).  \cmd{\FN@joinhboxes} is
+% entered in vertical mode, and will be exited in horizontal mode.
 %    \begin{macrocode}
 \def\FN@joinhboxes{%
+%<trace> \ifvmode \errmessage{Unexpected vertical mode.}\fi
   \begingroup\setbox\z@\lastbox
-    \ifhbox\z@\FN@joinhboxes
+    \ifhbox\z@ \FN@joinhboxes
+%<trace> \ifvmode \errmessage{Unexpected vertical mode.}\fi
       \endgroup
       \nobreak\hskip\parfillskip
       \@makefnbreak
     \else
 %<trace> \ifvbox\z@ \errmessage{Unexpected vbox.}\fi
       \endgroup
+      \vadjust{\nobreak\vskip-\baselineskip}\nobreak\hfill\break
       \xdef\FN@vfound{\z@}%
       \xdef\FN@found{\z@}%
     \fi
   \xdef\FN@lasthsize{\the\dimexpr \ht\z@ +\dp\z@}%
   \unhbox\z@}
-
+%    \end{macrocode}
+% \begin{macro}{\FN@par}
+% \begin{macro}{\FN@noindent}
+% \begin{macro}{\FN@indent}
+%   In-paragraph footnotes are collected in horizontal mode.  So
+%   |\par|, \cmd{\noindent} and \cmd{\indent} simply don't work.  We
+%   replace them with something having the same effect when the boxes
+%   get unhboxed.  Note that this does not admit the tracking of
+%   club/widow penalties: in a later version, it should get replaced
+%   by something that actually allows for separate paragraphs.  One
+%   possibility would be to replace the current single hbox for an
+%   in-paragraph footnote by an hbox of hboxes and unbox all of them
+%   in separate paragraphs.  But that glosses over the fact that a
+%   multi-paragraph footnote does not make sense in anything but
+%   vertical mode.  So a saner way would probably be to close off the
+%   hbox altogether and reinsert it into a vbox, restarting the whole
+%   footnote in vertical mode.  Both of those approaches would require
+%   that no groups have been opened since the start of the footnote by
+%   the time |\par| gets called.  The below pseudosolution at least
+%   has the advantage of not depending on the grouping structure at
+%   all.
+%    \begin{macrocode}
 \def\FN@par{\unskip\nobreak\hskip\parfillskip
   \vadjust{\vskip\parskip}\break\null\kern\parindent\ignorespaces}
 \def\FN@noindent{\unkern}
 \def\FN@indent{\unkern{\setbox\z@\null\wd\z@\parindent\box\z@}}
-
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+%    \begin{macrocode}
 \def\MFL@fnoteplain{\FN@fnotenested{plain}}
 \def\MFL@fnotepara{\FN@fnotenested{para}}
 
@@ -1070,7 +1152,7 @@
   \expandafter\expandafter\expandafter\expandafter
   \iffalse  \FN@specific\FN@masterinsert\@makefntext\fi
   \@makefnendbox
-  \ifx\FN@boxtype\vbox\@finalstrut\strutbox\fi
+  \ifx\FN@boxtype\vbox\@finalstrut\strutbox \else \unskip \fi
   \FN@colorstackfinish
   \color@endgroup
   \egroup
@@ -1104,8 +1186,7 @@
 
 %<trace>\def\MFL@showone#1#2{\message{Box #2:}\showbox#2%
 %<trace>  \MFL@checkconsistency{#2}%
-%<trace>  \message{Cachebox #2:}\showbox\FN@cache#2%
-%<trace>  \MFL@checkconsistency{#2}}
+%<trace>  \message{Cachebox #2:}\showbox\FN@cache#2}
 %<trace>
 %<trace>\def\MFL@checkconsistency#1{{%
 %<trace>  \setbox\z@\vbox{\unvcopy#1%
@@ -1194,7 +1275,6 @@
 %    \begin{macrocode}
 \def\MFL@processplain#1{%
 %<trace> \MFL@checkconsistency#1%
-%<trace> \MFL@checkconsistency{\FN@cache#1}%
    \ifvoid\FN@cache#1%
      \global\setbox\FN@tempbox\vbox\bgroup
        \unvbox#1%
@@ -1448,12 +1528,12 @@
 %   sequence name where the marks get stored, the second tells what
 %   kind of marks to sweep, like |\firstmarks|.
 %    \begin{macrocode}
-\def\FN@sweepmarks#1#2{{\def\@elt##1{\marks##1{\unexpanded
-        \expandafter{#2##1}}}%
+\def\FN@sweepmarks#1#2{{\def\@elt##1{\marks##1{\noexpand\unexpanded
+       {\unexpanded\expandafter{#2##1}}}}%
     \xdef#1{\FN@allmarks\z@}}}
 %    \end{macrocode}
 % \end{macro}
-
+%
 % This is our own output routine that does all the balancing stuff.
 % If we receive a forced penalty here, we must not do any of our
 % output processing on our own unless this is the choice of the
@@ -1475,7 +1555,7 @@
 % the available page size, and the available page material will also
 % increase.  There is a singular exception to that rule, and that are
 % split and floating insertions.  However, we notice their presence by
-% a non-zero setting of \cms{\insertpenalties}, and we can just
+% a non-zero setting of \cmd{\insertpenalties}, and we can just
 % measure the material that they have taken up in a forced pass of the
 % output routine, adding that much to our request size.  However, this
 % operation will change the penalties associated with the page breaks.
@@ -1581,15 +1661,12 @@
 %<trace>  \ifnum\lastnodetype>\m@ne
 %<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
 %    \end{macrocode}
-% If the previous output penalty had been a forced penalty, we would
-% like to repeat it?!?  This does not look plausible.
-% \cmd{\pagediscards} should be empty, and the old outputpenalty, if
-% anywhere, should appear at the bottom of the old box, not the
-% current list.
+% If the previous break has been at a penalty, we reinsert the penalty
+% and the page discards and reset the \cmd{\outputpenalty}.
 %    \begin{macrocode}
-%      \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
-%      \pagediscards
-%      \global\outputpenalty\@M
+      \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
+      \pagediscards
+      \global\outputpenalty\@M
     \else
       \setbox\z@\lastbox
       \unskip
@@ -1746,14 +1823,17 @@
   \fi
   \global\advance\FN@outervsize-\vsize\relax
   \global\deadcycles\z@
-  \FN@firstmarks
-  \FN@sweepmarks\FN@botmarks\botmarks
-  \FN@botmarks}
+%    \end{macrocode}
+% For some reason, the following does not work yet and causes infinite
+% loops:
+%    \begin{macrocode}
+%   \FN@firstmarks
+%   \FN@sweepmarks\FN@botmarks\botmarks
+%   \FN@botmarks
+}
 %    \end{macrocode}
 % \end{macro}
-
-
-
+%
 % Ok, here is the deal.  If the \cmd\FN@truevsize is negative, we have
 % an overfull vbox at our hand.  We then start the splitting action.
 % We take the first non-split lowest footnote block and split it to
@@ -2481,19 +2561,19 @@
 %   Ok, now we have emptied the cache and readjusted the size.  We now
 %   fill the cache by first copying the insertion into it.
 %    \begin{macrocode}
-  \global\setbox\count@\vbox\bgroup\unvcopy#2%
+  \global\setbox\count@\vbox\bgroup\vbox\bgroup\unvcopy#2%
     \let\@elt\FN@removecheck
     \FN@retainkept
 %    \end{macrocode}
 % Now if nothing was retained, we void the cachebox.
 %    \begin{macrocode}
-    \ifvoid\z@ \egroup \global\setbox\count@ \box\voidb@x
+    \ifvoid\z@ \egroup\egroup \global\setbox\count@ \box\voidb@x
 %    \end{macrocode}
 % Otherwise, we combine all the boxes that remain on the page.
 %    \begin{macrocode}
     \else \def\FN@masterinsert{#2}%
-      \FN@assembleboxes\nointerlineskip\box\z@
-    \egroup
+      \FN@assembleboxes\global\setbox\count@\box\z@\egroup
+      \nointerlineskip\box\count@\egroup
 %    \end{macrocode}
 % Now we just need to reduce the available size on the page by the
 % height of the assembled material:
@@ -2543,7 +2623,8 @@
 % the document starts, we do so
 %    \begin{macrocode}
 \AtBeginDocument{\@ifundefined{footinsdefault}%
-  {\DeclareNewFootnote[plain]{default}}{}}
+  {\DeclareNewFootnote[plain]{default}}{}%
+}
 %    \end{macrocode}
 % And since LaTeX's macros are inferior to our own (and would probably
 % not match too well), we reroot them to the default footnote style.

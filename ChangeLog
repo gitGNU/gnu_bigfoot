@@ -1,3 +1,10 @@
+2005-07-13  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Change the normal algorithms into unrestricted
+	horizontal mode so that for most purposes we'll get proper
+	widow/clubpenalties for line breaks forced by the formatting
+	algorithms.
+
 2005-06-28  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx (\FN@sweepmarks): do mark sweeping.
