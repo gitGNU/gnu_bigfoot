@@ -1,5 +1,5 @@
-% $Id: perpage.sty,v 1.7 2005/04/21 12:58:40 dak Exp $
-% Copyright 2002, 2003, 2004 David Kastrup <dak@gnu.org>
+% $Id: perpage.sty,v 1.8 2005/07/13 07:18:56 dak Exp $
+% Copyright 2002, 2003, 2004, 2005 David Kastrup <dak@gnu.org>
 % Licence: GPL version 2 or later
 %
 % The \texttt{perpage} package adds the ability to reset counters per
@@ -84,8 +84,8 @@
 
 \NeedsTeXFormat{LaTeX2e}
 \def\next$#1: #2 #3${#2}
-\ProvidesPackage{perpage}[\next$Date: 2005/04/21 12:58:40 $
-  v\next$Revision: 1.7 $ Reset/sort counters per page]
+\ProvidesPackage{perpage}[\next$Date: 2005/07/13 07:18:56 $
+  v\next$Revision: 1.8 $ Reset/sort counters per page]
 
 \newcommand\AddAbsoluteCounter[1]
 {\@ifundefined{c@abs#1}{%
@@ -117,10 +117,17 @@
 \newcommand*\MakeSortedPerPage[2][\@ne]{%
   \pp@makeperpage{#2}\c@spchk@{#1}}
 
-% \cmd{\pp@makeperpage} does the relevant things for creating a
+\@onlypreamble\MakePerPage
+\@onlypreamble\MakeSorted
+\@onlypreamble\MakeSortedPerPage
+
+% \cmd{\pp@makeperpage} does the relevant things for modifying a
 % counter.  It defines its reset value, it defines the correspoding
 % absolute counter.  The absolute counter is also used for assigning
-% numbers while reading the |.aux| file.
+% numbers while reading the |.aux| file.  For this purpose it is
+% assigned the initialized values here and in the enddocument hook
+% (which is called before rereading the aux file), while the counter
+% is reset to zero at the start of the document.
 \def\pp@makeperpage#1#2#3{%
   \global\expandafter\mathchardef\csname c@pp@r@#1\endcsname=#3\relax
   \global\@namedef{c@pchk@#1}{#2{#1}}%
@@ -131,6 +138,8 @@
   \AtBeginDocument{\setcounter{pp@a@#1}\z@}%
   \edef\next{\noexpand\AtEndDocument{\noexpand\setcounter{pp@a@#1}{%
         \number\value{pp@a@#1}}}}\next}
+
+\@onlypreamble\pp@makeperpage
 
 % Check for an empty vertical list.
 
@@ -209,6 +218,9 @@
   \addtocounter{pp@a@#1}\@ne
   \ifnum\value{#1}=\@ne
     \expandafter\xdef\csname pp@g@#1\endcsname{\number\value{pp@a@#1}}%
+    \edef\next{\noexpand\AtEndDocument{\global\let
+      \expandafter\noexpand\csname pp@g@#1@\number\value{pp@a@#1}\endcsname
+      \relax}}\next
   \fi
   \pp@fetchctr{#1}%
   \ifx\pp@page\@empty
