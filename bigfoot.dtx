@@ -97,8 +97,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/07/13 05:28:01 $
-  Version \FN@next $Revision: 1.10 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/07/15 18:34:53 $
+  Version \FN@next $Revision: 1.11 $]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -1014,6 +1014,12 @@
 % \end{macro}
 % \end{macro}
 %    \begin{macrocode}
+\ifx\NCC@makemark\@undefined
+  \ifx\NCC@makefnmark\@undefined \else
+    \def\NCC@makemark{\NCC@makefnmark}
+  \fi
+\fi
+
 \let\FN@errorstack\@empty
 
 \def\FN@fnotecommon#1#2#3{%
@@ -1235,17 +1241,17 @@
   \ifcase
     \ifvoid\z@\m@ne\fi \FN@config\z@
 %<trace>  \if\foottrace8\message{^^J\string\FN@retaindelayed:
-%<trace>     dropping box \FN@slotget{\dp\z@}}\fi
+%<trace>     dropping box \FN@slotget{\number\dp\z@}}\fi
 %<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
 %<trace>     \tracingonline=\@ne\showbox\z@}\fi
-    \ifnum\FN@slotget{\dp\z@}>\FN@lowestslave
-       \xdef\FN@lowestslave{\FN@slotget{\dp\z@}}\fi
+    \ifnum\FN@slotget{\number\dp\z@}>\FN@lowestslave
+       \xdef\FN@lowestslave{\FN@slotget{\number\dp\z@}}\fi
     \ifnum\dp\z@=\count@\else \FN@freeslot{\number\dp\z@}\fi
 %<trace> \ifnum\dp\z@<\@ne \errmessage{Unidentified box}\fi
     \FN@retaindelayed
   \or
 %<trace> \if\foottrace8\message{^^J\string\FN@retaindelayed:
-%<trace>    retaining box \FN@slotget{\dp\z@}}\fi
+%<trace>    retaining box \FN@slotget{\number\dp\z@}}\fi
 %<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
 %<trace>     \tracingonline=\@ne\showbox\z@}\fi
     {\FN@retaindelayed \nointerlineskip \box\z@}%
@@ -1254,7 +1260,7 @@
 %<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
 %<trace>  \ifvoid\z@ \else
 %<trace>     \if\foottrace8\message{^^J\string\FN@retaindelayed:
-%<trace>        carrying split box \FN@slotget{\dp\z@}}\fi
+%<trace>        carrying split box \FN@slotget{\number\dp\z@}}\fi
 %<trace>     \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
 %<trace>        \tracingonline=\@ne\showbox\z@}\fi\fi
   \fi}
@@ -1612,7 +1618,6 @@
 %  \ifnum\c@page=10 \traceon\fi
   \ifvoid\FN@savebox
     \FN@sweepmarks\FN@topmarks\topmarks
-    \FN@sweepmarks\FN@firstmarks\firstmarks
     \global\FN@outervsize\ht\@cclv\relax
     \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
     \global\advance\FN@outervsize-\ht\@cclv\relax
@@ -1813,6 +1818,7 @@
     \ifdim\dimen@>\z@
 %<trace> \if\foottrace8\message{sending special penalty}\fi%
       \hrule\@height\z@\@depth\z@
+      \FN@topmarks
       \penalty -13749
       \global\vsize=0.5\maxdimen
     \else
@@ -1827,9 +1833,6 @@
 % For some reason, the following does not work yet and causes infinite
 % loops:
 %    \begin{macrocode}
-%   \FN@firstmarks
-%   \FN@sweepmarks\FN@botmarks\botmarks
-%   \FN@botmarks
 }
 %    \end{macrocode}
 % \end{macro}
@@ -2598,13 +2601,13 @@
   \ifcase
     \ifvoid\z@\m@ne\fi \FN@config\z@
 %<trace>  \if\foottrace8\message{^^J\string\FN@retainkept:
-%<trace>     retaining box \FN@slotget{\dp\z@}}\fi
+%<trace>     retaining box \FN@slotget{\number\dp\z@}}\fi
 %<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
 %<trace>     \tracingonline=\@ne\showbox\z@}\fi
     {\FN@retainkept \nointerlineskip \box\z@}%
   \or
 %<trace>  \if\foottrace8\message{^^J\string\FN@retainkept:
-%<trace>     dropping box \FN@slotget{\dp\z@}}\fi
+%<trace>     dropping box \FN@slotget{\number\dp\z@}}\fi
 %<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
 %<trace>     \tracingonline=\@ne\showbox\z@}\fi
     \FN@retainkept

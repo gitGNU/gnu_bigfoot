@@ -1,3 +1,8 @@
+2005-07-15  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: A few typos fixed, moving around marks.
+	Add compatibility macro `\NCC@makemark' for new manyfoot versions.
+
 2005-07-13  David Kastrup  <dak@gnu.org>
 
 	* perpage.sty (\c@schk@): when opening a new counter group, reset
