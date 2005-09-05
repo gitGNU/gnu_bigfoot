@@ -1,3 +1,12 @@
+2005-09-05  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Get version info from style file.
+	Add description into version string.
+	Move \normalcolor back into vertical mode in vboxes.  Don't start
+	paragraph before `\@makefntext'.
+	Steal standard counters and print form from the default
+	definitions.
+
 2005-07-15  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: A few typos fixed, moving around marks.

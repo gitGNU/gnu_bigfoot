@@ -1,5 +1,7 @@
-% \title{The \texttt{bigfoot} package}
-% \author{David Kastrup}
+% \GetFileInfo{bigfoot.sty}
+% \title{The \texttt{bigfoot} package\\version \fileversion}
+% \date{\filedate}
+% \author{David Kastrup\thanks{dak@gnu.org}}
 % \maketitle
 % Purpose of this package is to provide a one-stop solution to almost
 % all problems related to footnotes.  You can use it as a drop-in
@@ -97,8 +99,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/07/15 18:34:53 $
-  Version \FN@next $Revision: 1.11 $]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/09/05 20:11:47 $
+  \FN@next $Revision: 1.12 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -1049,10 +1051,9 @@
       \@itemdepth\z@ \@enumdepth\z@
       \protected@edef\@currentlabel{\csname p@footnote%
          \expandafter\FN@stripfootins\string#2\endcsname\@thefnmark}%
-      \ifx\FN@boxtype\vbox \noindent
-      \else \FN@specific{#2}\@preparefnhtext
+      \ifx\FN@boxtype\vbox \normalcolor\nobreak
+      \else \FN@specific{#2}\@preparefnhtext \normalcolor
       \fi
-      \normalcolor
       \FN@specific{#2}\@makefntext
       \iffalse\fi
       \expandafter\xdef\csname FN@ht\number#2\endcsname{\the\footnotesep}%
@@ -2627,6 +2628,9 @@
 %    \begin{macrocode}
 \AtBeginDocument{\@ifundefined{footinsdefault}%
   {\DeclareNewFootnote[plain]{default}}{}%
+  \let\c@footnote\c@footnotedefault
+  \let\thefootnote\thefootnotedefault
+  \def\thefootnotedefault{\thefootnote}%
 }
 %    \end{macrocode}
 % And since LaTeX's macros are inferior to our own (and would probably
