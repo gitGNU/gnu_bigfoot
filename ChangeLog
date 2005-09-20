@@ -1,3 +1,15 @@
+2005-09-20  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Remove calculation of `\FN@lowestslave'.  Change
+	the marks mechanism to something that has a chance of actually
+	working.  Recycle marks before recursing (this is not yet done
+	completely).  Lots of small changes around the board to get the
+	new marks stuff working.  Fix wrong accounting for premature
+	insertions that don't belong to the current page (this currently
+	is not optimized in speed).  Some other accounting fixes.
+	Initialize `\FN@config' based on \topmarks (those are not correct
+	yet in case a line gets moved to the next page).
+
 2005-09-05  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Get version info from style file.
