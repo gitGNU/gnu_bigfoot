@@ -99,8 +99,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/09/20 09:17:07 $
-  \FN@next $Revision: 1.13 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/09/26 07:00:34 $
+  \FN@next $Revision: 1.14 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -1164,7 +1164,6 @@
   \color@endgroup
   \egroup
   \global\advance\FN@id\@ne
-  \marks\FN@slave{\number\FN@id}%
   \FN@slotxdef\FN@masterslot{\number\FN@id}%
   \ifhbox\z@
     \global\setbox\FN@tempbox\copy\z@
@@ -1179,6 +1178,7 @@
 %<trace>      \else \errmessage{Inconsistent
 %<trace>        \string\FN@masterslot=\FN@masterslot}\fi
   \MFL@insert\FN@masterinsert{\nointerlineskip\box\z@}%
+  \marks\FN@slave{\number\FN@id}%
   \MFL@endminipage
   \FN@colorstackegroup
 }
@@ -1548,7 +1548,7 @@
 %   additional mark entries).  If second and third arguments don't
 %   match, no mark gets placed.
 %    \begin{macrocode}
-\long\def\FN@establishmarks#1#2{\def\reserved@a{#2}%
+\long\def\FN@establishmarks#1#2{\edef\reserved@a{\unexpanded{#2}}%
   \edef\reserved@b{\unexpanded\expandafter{\splitbotmarks#1}}%
   \ifx\reserved@a\reserved@b
     \marks#1{\unexpanded\expandafter{\splitfirstmarks#1}}%
@@ -1581,13 +1581,15 @@
 \def\FN@insertmarks{%
   {\setbox\z@\copy\@cclv
     \splittopskip-\maxdimen\relax
+    \vbadness=\maxdimen
     \loop
     \ifvoid\z@\else
       {\let\@elt\FN@pseudomarks
-        \setbox\z@\vbox{\FN@allmarks0\unvcopy\z@}%
+        \setbox\z@\vbox{\FN@allmarks0\nobreak\unvcopy\z@}%
         \setbox\z@\vsplit\z@ to\maxdimen}%
       \let\@elt\FN@markspassone
       \edef\next{\FN@allmarks0}%
+      \setbox\z@\vbox{\nobreak\unvbox\z@}%
       {\setbox\z@\vsplit\z@ to\maxdimen}%
       \next
     \repeat}}
@@ -1702,9 +1704,13 @@
   \edef\FN@outputpenalty{\number\outputpenalty}%
   \ifvoid\FN@savebox
     \FN@sweeptopmarks
-    \global\FN@outervsize\ht\@cclv\relax
-    \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
-    \global\advance\FN@outervsize-\ht\@cclv\relax
+    \ifvoid\@cclv
+      \global\FN@outervsize\z@
+    \else
+      \global\FN@outervsize\ht\@cclv
+      \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
+      \global\advance\FN@outervsize-\ht\@cclv\relax
+    \fi
     \global\let\FN@vsadjustlist\@empty
     \FN@normaloutput
 %    \end{macrocode}
@@ -1728,9 +1734,11 @@
 % calling a special output, so that we can afterwards compensate for
 % it.
 %    \begin{macrocode}
-    \dimen@\ht\@cclv
-    \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
-    \global\advance\FN@outervsize\dimexpr\dimen@-\ht\@cclv\relax
+    \ifvbox\@cclv
+      \dimen@\ht\@cclv
+      \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
+      \global\advance\FN@outervsize\dimexpr\dimen@-\ht\@cclv\relax
+    \fi
 %    \end{macrocode}
 % Now we invalidate the cache boxes for all insertions that had
 % changed due to the recent additions to the page.
@@ -1749,7 +1757,10 @@
       \setbox\z@\lastbox
       \global\setbox\count@\vbox{\unvbox\z@\unvbox\count@}%
     \repeat
-    \ifnum\FN@outputpenalty=-13749
+    \ifcase
+      \ifnum\FN@outputpenalty=-13749 \@ne\fi
+      \ifnum\FN@outputpenalty=-13751 \@ne\fi \tw@
+    \or
       \FN@vsadjustlist
 %<trace> \if\foottrace8\message{receiving special penalty}\fi
 %    \end{macrocode}
@@ -1769,7 +1780,11 @@
       \unskip
 %<trace>  \ifnum\lastnodetype>\m@ne
 %<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
-      \FN@normaloutput
+      \ifnum\FN@outputpenalty=-13749
+        \FN@normaloutput
+      \else
+        \the\FN@output
+      \fi
     \else
       \dimen@\topskip
       \FN@vsadjustlist
@@ -1858,12 +1873,11 @@
 % If we have floating insertions, we need to catch up with them.  This
 % is done in case~1 which just places an immediate penalty and
 % recurses.
-%
 %    \begin{macrocode}
-    \ifdim\FN@vsize<\glueshrink\FN@vsize \tw@ \fi
+    \ifdim\FN@vsize<\glueshrink\FN@vsize \thr@@ \fi
 %    \end{macrocode}
-% Case 2 means page is overfull.  If there are no missing insertions,
-% try to split.  Else gather more material.
+% Case 3 means page is overfull.  If there are no missing insertions,
+% try to split.
 %    \begin{macrocode}
     \ifdim\FN@vsize>-\gluestretch\FN@vsize
       \ifdim\dimexpr\FN@vsize-\normalbaselineskip<\glueshrink\FN@vsize
@@ -1872,7 +1886,7 @@
 % page is underfull, and the free space is at least that of a single
 % line.  If we have no special output penalty, gather more material
 %    \begin{macrocode}
-        \ifnum\outputpenalty>-\@M \@ne\fi
+        \ifnum\outputpenalty>-\@M \tw@\fi
       \fi
     \fi\z@
 %    \end{macrocode}
@@ -1891,12 +1905,24 @@
     \FN@nest@iterate\FN@clearcache
   \or
 %    \end{macrocode}
-% We need additional material.  Of every nonempty box, we record its
-% skip value to be able to restore it later.  We then clear all the
-% skip values for nonempty boxes, since they need not be considered
-% again.
+% We just pull in remaining insertions and are done.
 %    \begin{macrocode}
     \FN@restartoutput
+    \penalty -13749
+%    \end{macrocode}
+% Now we want to gather additional material.  This is somewhat weird.
+% We first gather our material with a `normal' setting of topskip, and
+% then we'll have another go at the material using proper marks.  We
+% can't actually insert anything right now in order not to introduce a
+% premature breakpoint.
+%    \begin{macrocode}
+  \or
+    \dimen@=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
+    \FN@prepareoutput
+    \global\topskip \normalbaselineskip
+    \global\vsize \dimen@ 
+    \global\advance\FN@outervsize-\vsize
+    \global\deadcycles\z@
   \else
 %    \end{macrocode}
 % Fake our output box into something looking like a cache box
@@ -1905,7 +1931,8 @@
     \def\FN@masterslot{-1}%
     \global\setbox\@cclv\vbox{%
       \box\@cclv}%
-    \gdef\FN@config{}%
+    \xdef\FN@config{\noexpand\@elt{\number0\botmarks\FN@slave}%
+      {\number\maxdimen}}%
     \global\setbox\FN@savebox\vbox{}%
     \gdef\FN@badness{0}%
     \edef\FN@bestebadness{\number\maxdimen}%
@@ -1920,7 +1947,7 @@
     \global\setbox\FN@savebox\box\voidb@x
     \count@\vbadness
     \vbadness\maxdimen
-    \global\setbox\@cclv\vbox spread\FN@vsize{%
+    \global\setbox\@cclv\vbox spread\FN@vsize\bgroup
       \unvbox\@cclv
       \ifnum\lastpenalty>\z@
         \unpenalty
@@ -1928,8 +1955,14 @@
       \else
         \global\setbox\FN@tempbox\box\voidb@x
       \fi
-      \MFL@removevboxes
-      \boxmaxdepth\maxdepth}%
+      \setbox\z@\lastbox
+      \ifvbox\z@
+        \MFL@removevboxes
+        \unvbox\z@
+        \boxmaxdepth\maxdepth\egroup
+      \else
+        \egroup \global\setbox\@cclv\box\voidb@x
+      \fi
     \vbadness\count@
     \setbox\z@
       \ifvoid\FN@tempbox \box\FN@tempbox \else
@@ -1939,10 +1972,29 @@
         \fi
       \fi
     \let\@elt\relax
+%    \end{macrocode}
+% Ok, now we have in box~255 the split off stuff for the current
+% output routine, and in box~0 stuff that is going to follow
+% afterwards.  If box~0 is not void, we were not able to make use of
+% all of box~255.  There is a slight probability that by taking even
+% \emph{more} material from the main list, we might get a better
+% result (by being able to move footnote material to the next page
+% instead), but we don't make use of this possibility here.  In
+% general, we assume that if box~0 is nonvoid, we take the resulting
+% split.  Otherwise, if the page appears underfull, we pull in more
+% material.  If the page is not underfull, we can pass it to the
+% output routine.
+%    \begin{macrocode}
+    \dimen@=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
     \ifcase
-      \ifnum\FN@vsize<\normalbaselineskip \@ne\fi
-      \ifvoid\z@ \else \@ne\fi\z@
-      \FN@restartoutput
+      \ifvoid\z@ \else\tw@\fi
+      \ifdim\dimen@<\normalbaselineskip \@ne\fi
+      \z@    
+      \FN@prepareoutput
+      \global\topskip \normalbaselineskip
+      \global\vsize \dimen@ 
+      \global\advance\FN@outervsize-\vsize
+      \global\deadcycles\z@
     \or
 %<trace> \if\foottrace8%
 %<trace>   \message{^^JOutput: config is \FN@config...}\fi
@@ -1960,6 +2012,10 @@
     \unvbox\tw@
     \unvbox\z@
     \FN@nest@iterate\FN@clearcache
+  \or
+      \FN@restartoutput
+      \penalty -13751
+      \unvbox\z@
   \fi
   \fi}
 %    \end{macrocode}
@@ -2003,33 +2059,18 @@
 %    \end{macrocode}
 % Calculate the remaining size on this page:
 %    \begin{macrocode}
-    \dimen@=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
-%    \end{macrocode}
-% If it is less than one line, we just pull in remaining insertions
-% and are done.
+  \dimen@=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
+% We just pull in remaining insertions and are done.
 %    \begin{macrocode}
-  \ifdim\dimen@<\topskip
 %<trace> \if\foottrace8\message{sending special penalty}\fi
-    \hrule\@height\z@\@depth\z@
-    \unvcopy\FN@topmarkbox
-    \penalty -13750
-    \hrule\@height\z@\@depth\z@
-    \FN@insertmarks
-    \FN@prepareoutput
-    \global\topskip-\maxdimen\relax
-    \penalty -13749
-    \global\vsize 0.5\maxdimen
-%    \end{macrocode}
-% Now we want to gather additional material.  This is somewhat weird.
-% We first gather our material with a proper setting of topskip, and
-% then we'll have another go at the material using proper marks.  We
-% can't actually insert anything right now in order not to introduce a
-% premature breakpoint.
-%    \begin{macrocode}
-  \else
-    \FN@prepareoutput
-    \global\vsize \dimen@
-  \fi
+  \hrule\@height\z@\@depth\z@
+  \unvcopy\FN@topmarkbox
+  \penalty -13750
+  \hrule\@height\z@\@depth\z@
+  \FN@insertmarks
+  \FN@prepareoutput
+  \global\topskip-\maxdimen\relax
+  \global\vsize 0.5\maxdimen
   \global\advance\FN@outervsize-\vsize
   \global\deadcycles\z@
 }
@@ -2449,6 +2490,7 @@
 %    \begin{macrocode}
     \setbox\z@\vbox{\unvbox\tw@ \FN@restoreboxes}%
     \let\FN@splitcolors\FN@bestsplitcolors
+    \let\FN@slaveid\FN@bestslaveid
     \unvbox\z@
     \setbox\z@\lastbox
 %    \end{macrocode}
@@ -2622,13 +2664,14 @@
         \def\noexpand\FN@bestbadness{\number\numexpr\FN@badness+%
           \FN@breakpenalty}%
         \def\noexpand\FN@bestconfig{\FN@config}%
-        \def\noexpand\FN@slaveid{\FN@slaveid}%
+        \def\noexpand\FN@bestslaveid{\FN@slaveid}%
         \def\noexpand\FN@bestsplitcolors{\FN@splitcolors}%
         \FN@myvsize=\the\FN@myvsize\relax}%
       \global\setbox\FN@tempbox\vbox{\box4\nointerlineskip\box\z@}%
       \egroup
       \FN@tempinfo
       \let\FN@splitcolors\FN@bestsplitcolors
+      \let\FN@slaveid\FN@bestslaveid
 %    \end{macrocode}
 % Now all relevant info has been retrieved, and we collect the best
 % box info in |\box\tw@|.  The structure of the information is as

@@ -1,3 +1,11 @@
+2005-09-26  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Some changes across the board to make thinks work
+	more reliably.  Start supporting void box255 (not yet complete).
+	Add outputpenalty 13751 for unconditional iteration.  Refactor
+	`\FN@restartoutput'.  Use `\FN@bestslaveid' (is this necessary?).
+	`\topmarks' should now be correct in all cases.
+
 2005-09-20  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Remove calculation of `\FN@lowestslave'.  Change
