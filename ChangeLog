@@ -1,3 +1,9 @@
+2005-10-24  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Cater for a bit more of void main page, set the
+	minimum `\FN@bestebadness' at a different point.  Allow page
+	breaks in footnotes.
+
 2005-09-26  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Some changes across the board to make thinks work

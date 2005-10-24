@@ -99,8 +99,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/09/26 07:00:34 $
-  \FN@next $Revision: 1.14 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/10/24 13:34:24 $
+  \FN@next $Revision: 1.15 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -1801,18 +1801,22 @@
 % adjusted by the accumulated contributions of insertions to the page
 % size.  Fiddling with it would not appear necessary or even prudent.
 %    \begin{macrocode}
-      \global\setbox\@cclv\vbox{\unvbox\z@
-        \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
-        \pagediscards
+      \ifvoid\@cclv
+        \global\setbox\@cclv\box\z@
+      \else
+        \global\setbox\@cclv\vbox{\unvbox\z@
+          \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
+          \pagediscards
 %    \end{macrocode}
 % Now we might have had a \cmd{\topskip} value designed for requesting
 % a given number of lines.  We need to remove anything of that kind.
 % Splitting again achieves that.
 %    \begin{macrocode}
-        \global\setbox\@cclv\vbox{\break\unvbox\@cclv}%
-        {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}%
-        \unvbox\@cclv
-        \boxmaxdepth\maxdepth}%
+          \global\setbox\@cclv\vbox{\break\unvbox\@cclv}%
+          {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}%
+          \unvbox\@cclv
+          \boxmaxdepth\maxdepth}%
+      \fi
       \global\outputpenalty\@M
 %    \end{macrocode}
 % Ok, now if \cmd{\topskip} is actually \emph{positive}, we have been
@@ -1892,11 +1896,11 @@
 %    \end{macrocode}
 % page has appropriate size or we have special penalty.
 %    \begin{macrocode}
-    \count@\vbadness
-    \vbadness\maxdimen
-    \global\setbox\@cclv\vbox
-      spread\FN@vsize{\unvbox\@cclv\boxmaxdepth\maxdepth}%
-    \vbadness\count@
+    \ifvbox\@cclv
+      {\vbadness\maxdimen
+        \global\setbox\@cclv\vbox
+          spread\FN@vsize{\unvbox\@cclv\boxmaxdepth\maxdepth}}%
+    \fi
 %<trace> \if\foottrace8
 %<trace> \message{Calling regular output with }
 %<trace> \message{\outputpenalty=\number\outputpenalty}
@@ -1935,7 +1939,6 @@
       {\number\maxdimen}}%
     \global\setbox\FN@savebox\vbox{}%
     \gdef\FN@badness{0}%
-    \edef\FN@bestebadness{\number\maxdimen}%
     \edef\FN@defaultpenalty{\ifnum\outputpenalty<\@M
         \number\outputpenalty
       \else
@@ -1987,11 +1990,13 @@
 %    \begin{macrocode}
     \dimen@=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
     \ifcase
-      \ifvoid\z@ \else\tw@\fi
-      \ifdim\dimen@<\normalbaselineskip \@ne\fi
-      \z@    
+      \ifvoid\z@ \else\thr@@\fi
+      \ifdim\ht\@cclv<\normalbaselineskip \@ne\fi
+      \ifdim\dimen@<\normalbaselineskip \tw@\fi \@ne
+    \or
       \FN@prepareoutput
       \global\topskip \normalbaselineskip
+      \ifdim\dimen@<\normalbaselineskip \dimen@=2\baselineskip\fi
       \global\vsize \dimen@ 
       \global\advance\FN@outervsize-\vsize
       \global\deadcycles\z@
@@ -2060,6 +2065,7 @@
 % Calculate the remaining size on this page:
 %    \begin{macrocode}
   \dimen@=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
+%    \end{macrocode}
 % We just pull in remaining insertions and are done.
 %    \begin{macrocode}
 %<trace> \if\foottrace8\message{sending special penalty}\fi
@@ -2159,7 +2165,9 @@
     \vbox{\unvcopy#1%
       \count@\FN@defaultpenalty
       \FN@getbreakpenaltyii
-      \xdef\FN@breakpenalty{\number\count@}%
+      \xdef\FN@breakpenalty{\number\ifnum\count@>-\@M
+                              \count@
+                             \else -\@M \fi}%
     }}}
 
 \def\FN@getbreakpenaltyii{%
@@ -2216,7 +2224,16 @@
 % \begin{macro}{\FN@newlevel}
 %   This is the main workhorse of |bigfoot|.  It splits a particular
 %   footnote level, recursing if necessary.  The level list is
-%   delimited with \cmd{\FN@mainsplitreturn}.
+%   delimited with \cmd{\FN@mainsplitreturn}.  The whole thing is
+%   looped through while the splits are being optimized.  While
+%   recursing, \cmd{\FN@badness} contains the badness of the current
+%   split configuration: a penalty of $10000$ for any split, plus the
+%   penalty at the split points.  \cmd{\FN@ebadness} is the same, but
+%   also counting in the stretch badness for one particular
+%   configuration.  Ebadness does not make sense to evaluate more than
+%   temporarily: it is not passed through the levels.  Since
+%   \cmd{\FN@badness} is globally tampered with, its value at entry is
+%   saved in \cmd{\FN@entrybadness}.
 %    \begin{macrocode}
 \def\FN@newlevel#1#2#3\FN@mainsplitreturn{%
   \count@\FN@cache#2%
@@ -2285,8 +2302,9 @@
 % |\FN@restoreboxes|.
 %    \begin{macrocode}
     \global\setbox\count@\vbox\bgroup\unvbox\count@
-      \edef\FN@bestconfig{\FN@entryconfig}%
-      \edef\FN@bestvsize{-\the\maxdimen}%
+      \edef\FN@bestebadness{\number\maxdimen}%
+      \let\FN@bestconfig\@undefined
+      \let\FN@bestvsize\z@skip
       \let\FN@splitcolors\@empty
       \setbox\tw@\box\voidb@x
       \setbox\z@\lastbox
@@ -2397,8 +2415,13 @@
   \let\FN@next\FN@breakpenalty
 %    \end{macrocode}
 % No point in recursing if we can't beat the current best one.
+% However, if we find a forced break, this is considered perfect as
+% long as we are not overfull.
 %    \begin{macrocode}
-  \ifnum\FN@badness<\FN@bestebadness
+  \ifcase
+    \ifnum\FN@breakpenalty>-\@M \else \@ne \fi
+    \ifnum\FN@badness<\FN@bestebadness \@ne \fi
+  \z@\or
 %    \end{macrocode}
 % are we overfull?  If so, recurse once for getting better.
 %    \begin{macrocode}
@@ -2508,6 +2531,7 @@
      \global\setbox\FN@tempbox\box\z@
      \egroup
   \fi
+%    \end{macrocode}
 % Ok, the box to be carried over is now in box~\cmd{\FN@tempbox}, the
 % box to be be left last in this insertion is in box~\cmd{\z@}.  We
 % now have to add color information and other stuff if a split
@@ -2636,6 +2660,8 @@
 %    \begin{macrocode}
   \ifcase
     \ifnum\FN@ebadness>\bigfoottolerance
+      \else \@ne\fi
+    \ifnum\FN@breakpenalty>-\@M
       \else \@ne\fi
 %    \end{macrocode}
 % If no change of configuration follows later, we can return the best
