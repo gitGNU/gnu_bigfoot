@@ -1,3 +1,11 @@
+2005-11-04  David Kastrup  <dak@gnu.org>
+
+	* perpage.sty: Don't set unused counter `pp@a@#1'.
+
+	* bigfoot.dtx: Some rearrangements, try to maintain prevdepth
+	instead of using struts when breaking through a list, try to
+	properly account for that.
+
 2005-10-24  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Cater for a bit more of void main page, set the

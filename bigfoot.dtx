@@ -99,8 +99,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/10/24 13:34:24 $
-  \FN@next $Revision: 1.15 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/11/04 00:18:38 $
+  \FN@next $Revision: 1.16 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -2336,7 +2336,10 @@
 %    \end{macrocode}
 % Now we are building one tentative candidate for returning in
 % |\box\z@|.  It will get discarded in case that a better candidate
-% was already found before this box completes.
+% was already found before this box completes.  At all points of time,
+% \cmd{\prevdepth} is maintained appropriately according to the last
+% insertion.  That way, we can finish the box with an appropriate
+% strut.
 %    \begin{macrocode}
       \setbox\z@
       \vbox\bgroup
@@ -2542,29 +2545,25 @@
 %    \begin{macrocode}
   \ifnum\FN@currentinsertion=\FN@savebox
   \else
-    \ifvoid\FN@tempbox
-    \else
-      \ifx\FN@splitcolors\@empty
+    \setbox\z@\vbox{%
+      \dimen@\dp\z@
+      \unvbox\z@
+      \ifvoid\FN@tempbox
+      \else
         \global\setbox\FN@tempbox\vbox{%
           \marks\FN@master{\FN@masterslot}%
           \marks\FN@slave{\FN@slaveid}%
+          \FN@coloraftersplit\FN@splitcolors
           \nobreak
           \unvbox\FN@tempbox}%
-      \else
-        \setbox\z@\vbox{%
-          \unvbox\z@
-          \global\setbox\FN@tempbox\vbox{%
-            \marks\FN@master{\FN@masterslot}%
-            \marks\FN@slave{\FN@slaveid}%
-            \FN@coloraftersplit\FN@splitcolors
-            \nobreak
-            \unvbox\FN@tempbox}}%
+        \ht\FN@tempbox
+        \dimexpr\ht\FN@tempbox+\dp\FN@tempbox-\FN@masterslot sp\relax
+        \dp\FN@tempbox\FN@masterslot sp\relax
+        \wd\FN@tempbox\maxdimen
       \fi
-      \ht\FN@tempbox
-      \dimexpr\ht\FN@tempbox+\dp\FN@tempbox-\FN@masterslot sp\relax
-      \dp\FN@tempbox\FN@masterslot sp\relax
-      \wd\FN@tempbox\maxdimen
-    \fi
+      \ifdim\dimen@<\splitmaxdepth
+        \hrule\@height-\dimen@ \@width\z@
+         \@depth \splitmaxdepth \relax \fi}%
     \ht\z@=\dimexpr\ht\z@+\dp\z@-\FN@masterslot sp\relax
     \dp\z@=\FN@masterslot sp
   \fi
@@ -2693,7 +2692,9 @@
         \def\noexpand\FN@bestslaveid{\FN@slaveid}%
         \def\noexpand\FN@bestsplitcolors{\FN@splitcolors}%
         \FN@myvsize=\the\FN@myvsize\relax}%
-      \global\setbox\FN@tempbox\vbox{\box4\nointerlineskip\box\z@}%
+      \dimen@\prevdepth
+      \global\setbox\FN@tempbox\vbox{\box4\nointerlineskip\box\z@
+        \kern\dimen@}%
       \egroup
       \FN@tempinfo
       \let\FN@splitcolors\FN@bestsplitcolors
@@ -2706,7 +2707,7 @@
 % This is then followed by a zero kern, and then by pairs of boxes and
 % penalties indicating the swept box.
 %    \begin{macrocode}
-      \setbox\tw@\vbox{\unvcopy\FN@tempbox
+      \setbox\tw@\vbox{\unvcopy\FN@tempbox \unkern
         \setbox\tw@\lastbox \setbox4\lastbox
 %<trace>  \ifnum\lastnodetype>\m@ne
 %<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
@@ -2719,7 +2720,7 @@
 % gets attached afterwards.
 %    \begin{macrocode}
         \nointerlineskip\copy\z@\break\nointerlineskip
-        \box\tw@\penalty\FN@tempbox\nointerlineskip
+        \box\tw@\penalty\FN@tempbox
         \let\@elt\FN@cachesize
         \advance\FN@myvsize-\dimexpr
           (\FN@vsize-\glueshrink\FN@vsize)%
@@ -2732,9 +2733,10 @@
           *\@m/\count\FN@currentinsertion\relax
         \xdef\FN@tempinfo{\FN@myvsize=\the\FN@myvsize\relax}}%
       \FN@tempinfo
-      \nointerlineskip
       \setbox\z@
-      \vbox\bgroup\unvbox\FN@tempbox \setbox\tw@\lastbox
+      \vbox\bgroup\unvbox\FN@tempbox 
+        \prevdepth\lastkern \unkern
+        \setbox\tw@\lastbox
         \setbox4\lastbox
 %<trace>  \ifnum\lastnodetype>\m@ne
 %<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
@@ -2754,30 +2756,39 @@
     \expandafter\FN@returnbest
   \fi}
 %    \end{macrocode}
-% \cmd{\FN@contribute@tw@} will go from the state where we have the
-% previous \cmd{\splitdiscards} in box~4 and some material split off
-% from box~0 in box~2 to a state where box~2 is contributed to the
-% current list, if necessary extended by a strut to achieve the
-% maximal depth.
+% \begin{macro}{\FN@contribute@tw@}
+%   This will go from the state where we have the
+%   previous \cmd{\splitdiscards} in box~4 and some material split off
+%   from box~0 in box~2 to a state where box~2 is contributed to the
+%   current list, if necessary extended by a strut to achieve the
+%   maximal depth.
 %    \begin{macrocode}
 \def\FN@contribute@tw@{%
 %    \end{macrocode}
-% we want to contribute box~2 back without any topskip glue, so we
-% manually remove any such glue by splitting an empty box off.
+% First we change the current colors if we have any in our group.  Not
+% sure if this is entirely correct.
 %    \begin{macrocode}
   \begingroup\edef\FN@next{\splitbotmarks\FN@color}%
   \ifx\FN@next\@empty \endgroup\else \endgroup
     \edef\FN@splitcolors{\splitbotmarks\FN@color}\fi
-  \ifvoid4
-    \setbox4\vbox{\splitdiscards}%
-    \setbox\tw@\vbox{\unvbox\tw@}%
+%    \end{macrocode}
+% If box~4 is void, there is nothing from a previous split to
+% reconstitute.
+%    \begin{macrocode}
+  \ifvoid4 \setbox4\vbox{\splitdiscards}%
+     \setbox\tw@\vbox{\unvbox\tw@}%
   \else
-    \advance\FN@myvsize-\ht4\relax
+%    \end{macrocode}
+% We want to contribute box~2 back without any topskip glue, so we
+% manually remove any such glue by splitting an empty box off.
+%    \begin{macrocode}
+    \advance\FN@myvsize\dimexpr
+      \ifdim\prevdepth<\splitmaxdepth \splitmaxdepth-\prevdepth \fi
+      -\ht4\relax
     \unvbox4
     \setbox4\vbox{\splitdiscards}%
     \setbox\tw@\vbox{\break\unvbox\tw@}%
     {\splittopskip-\maxdimen \setbox\tw@\vsplit\tw@ to\z@}%
-  \fi
 %    \end{macrocode}
 % Notice the effect of \TeX's special box scope rules: box~2 assigned
 % just right now will be affected by the split.  The result of the
@@ -2786,24 +2797,22 @@
 % exit.  In this manner, any topskip glue will have disappeared.
 % After the split, box~2 is set to the natural depth and height of
 % its contents.
+%
+% If this split is taken, the box is adjusted to have a full depth of
+% \cmd{\splitmaxdepth}, and we take this into account.
 %    \begin{macrocode}
-  \advance\FN@myvsize-\dimexpr\ht\tw@+\dp\tw@\relax
-  \dimen@\dp\tw@
+  \fi
+  \advance\FN@myvsize-\dimexpr \ht\tw@+\dp\tw@\relax
+  \prevdepth=\dp\tw@
   \unvbox\tw@
-%    \end{macrocode}
-% If this depth does not reach \cmd{\splitmaxdepth}, we add a strut
-% that will cause the depth to be reached exactly.  We have to remove
-% the added distance from the contents of box~4 in case that this
-% split will not be permanent and a need would arise to glue the stuff
-% back together with following stuff from box~0.
-%    \begin{macrocode}
-  \ifdim\dimen@<\splitmaxdepth
-    \hrule\@height-\dimen@\@width\z@\@depth\splitmaxdepth
-    \advance\dimen@-\splitmaxdepth
-    \setbox4\vbox{\unvbox4\vskip\dimen@}%
-    \advance\FN@myvsize\dimen@
+  \ifdim\prevdepth<\splitmaxdepth
+    \advance\FN@myvsize-\dimexpr \splitmaxdepth-\prevdepth \relax
   \fi}
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@uncontribute@tw@}
+%   This is just the opposite: after a split, we revert its effects again.
+%    \begin{macrocode}
 \def\FN@uncontribute@tw@{%
   \ifvoid\tw@ \else
   \setbox\tw@\vbox{\unvbox\tw@\splitdiscards}%
@@ -2811,6 +2820,7 @@
   {\splittopskip-\maxdimen \setbox\z@\vsplit\z@ to\z@}%
   \setbox\z@\vbox{\unvbox\tw@\unvbox\z@}\fi}
 %    \end{macrocode}
+% \end{macro}
 % \begin{macro}{\FN@reconfig}
 %   This reconfigures the insertion cache to contain only the boxes
 %   that belong to this page.  If the insertion box is empty, we can
