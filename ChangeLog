@@ -1,3 +1,10 @@
+2006-01-05  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Change bookkeeping of splitdiscards in order to
+	simplify the next batch of changes.  Optimization appears to be
+	somewhat messed up, but there is no sense in fixing that before
+	the next restructuring.
+
 2005-11-04  David Kastrup  <dak@gnu.org>
 
 	* perpage.sty: Don't set unused counter `pp@a@#1'.
@@ -14,7 +21,7 @@
 
 2005-09-26  David Kastrup  <dak@gnu.org>
 
-	* bigfoot.dtx: Some changes across the board to make thinks work
+	* bigfoot.dtx: Some changes across the board to make things work
 	more reliably.  Start supporting void box255 (not yet complete).
 	Add outputpenalty 13751 for unconditional iteration.  Refactor
 	`\FN@restartoutput'.  Use `\FN@bestslaveid' (is this necessary?).

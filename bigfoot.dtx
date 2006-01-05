@@ -99,8 +99,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2005/11/04 00:18:38 $
-  \FN@next $Revision: 1.16 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/01/05 19:13:08 $
+  \FN@next $Revision: 1.17 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -452,7 +452,7 @@
   \xdef\FN@slotfreelist{#1}}
 %    \end{macrocode}
 % \end{macro}
-
+%
 % \subsubsection{Dealing with footnote stacks}
 % Footnote stacks are used for paired footnotes that refer to a text
 % range instead of a single text point.  For example, you can use
@@ -585,7 +585,10 @@
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@regeneratecache}
-%   This unconditionally regenerates one cache box.
+%   This unconditionally regenerates one cache box.  The structure of
+%   a cache box is basically a list of vertical boxes.  All but the
+%   last such box are packed into a single vertical box which is then
+%   followed by the last vertical box.
 %    \begin{macrocode}
 \def\FN@regeneratecache#1#2{%
    \global\setbox\FN@cache#2=%
@@ -1039,7 +1042,7 @@
     \let\FN@boxtype=#1%
     \setbox\z@#1\bgroup
 %    \end{macrocode}
-% The following is for the likes of PDFTeX which has its own idea
+% The following is for the likes of PDF\TeX\ which has its own idea
 % about how to restore a color stack.
 %    \begin{macrocode}
       \let\current@color\default@color
@@ -1281,6 +1284,12 @@
 \def\MFL@processplain#1{%
 %<trace> \MFL@checkconsistency#1%
    \ifvoid\FN@cache#1%
+%    \end{macrocode}
+% Now if the cache box is void, nothing gets typeset on the current
+% page.  What we do, however, is to collect all boxes from the
+% original insertion that did not make it on this page and reinsert
+% them.  \cmd{\count@} is cleared to zero to retain nothing special.
+%    \begin{macrocode}
      \global\setbox\FN@tempbox\vbox\bgroup
        \unvbox#1%
        \count@\z@
@@ -1289,8 +1298,15 @@
        \else \nointerlineskip \box\z@ \egroup
          \MFL@realinsert{#1}{\unvbox\FN@tempbox}%
        \fi
+%    \end{macrocode}
+% The following stops in the insertion process within the |manyfoot|
+% package.
+%    \begin{macrocode}
      \expandafter\expandafter
    \fi\iffalse\fi
+%    \end{macrocode}
+% Ok, this is the case when we have a nonvoid cache box.
+%    \begin{macrocode}
    \global\setbox#1\vbox\bgroup%
      \unvbox\FN@cache#1%
      \ifnum\lastpenalty>\z@
@@ -1299,6 +1315,11 @@
      \else
        \setbox\z@\box\voidb@x
      \fi
+%    \end{macrocode}
+% Ok, now box zero contains carryover material (if any).  We
+% initialize \cmd{\count@} to this so that we will keep this carryover
+% material just once.
+%    \begin{macrocode}
      \count@\dp\z@
      \global\setbox\FN@tempbox\vbox\bgroup
        \box\z@
@@ -1319,9 +1340,27 @@
 % know the sizes we are dealing with regarding the new configuration
 % until we do so.  The caches are kept up to date globally.  When we
 % are working at several levels in the recursion, we have a bottom
-% active level where we may are looking for a way to find a best
-% underfull box and configuration.  We will return at most one
-% configuration once we are finished: the best underfull one if
+% active level where we may are looking for a way to find a best break
+% and configuration.  We will return at most one configuration once we
+% are finished.  While we are working with a returned configuration,
+% adding more material on the current list will not require another
+% recursion as long as the totals stay underfull: the penalty
+% difference between underfull configurations becomes smaller while
+% the underfullness decreases, which means that smaller breaks that
+% have not been chosen before might become eligible if the penalties
+% allow for that.  Only when the badness of underfullness remains
+% infinite can't we have any improvement.
+%
+% Ok, after we recurse for removing an underfull condition, the
+% resulting configuration can't actually be used further for breaks
+% with less remaining space.  It is, however, clear that if less space
+% remains, there is no better break with the same configuration
+% leaving \emph{more} space: if there were, it would already have been
+% taken.  That means that our goal height for the next break will be
+% chosen in order to reach the exact size met on the last recursion.
+% No break before that can be chosen on the next try, but a break
+% after it might then be taken.
+%
 % available, or an overfull one.  If a deeper level at any point of
 % time returns an overfull configuration, we are finished.  The best
 % configuration to be returned is the least underfull.  If there is
@@ -1621,7 +1660,6 @@
 % measure the material that they have taken up in a forced pass of the
 % output routine, adding that much to our request size.  However, this
 % operation will change the penalties associated with the page breaks.
-
 %
 % Unfortunately, this is not sufficient: the penalty might have been
 % inserted with a box immediately preceding it.  In that case the
@@ -1859,7 +1897,10 @@
 % \cmd{\FN@vsize} is now being set to the vertical size taken up by
 % the insertions, according to \TeX.  Note that this does not include
 % flexibility.  This much amount of space gets available on the
-% current page if we remove all insertions.
+% current page if we remove all insertions.  This figures into
+% \cmd{\FN@vsize} as a \emph{positive} quantity since the insertion
+% size was taken from \cmd{\pagegoal}, and we reconstitute it in this
+% manner.
 %    \begin{macrocode}
   \FN@nest@iterate{\FN@insertouterspace\global\FN@vsize\dimexpr\z@}%
 %    \end{macrocode}
@@ -1870,6 +1911,13 @@
   \xdef\FN@config{\noexpand\@elt{\number0\botmarks\FN@slave}%
     {\number\maxdimen}}%
   \FN@nest@iterate\FN@reconfig
+%    \end{macrocode}
+% Note that \cmd{\FN@reconfig} subtracts the \emph{actual} size of all
+% insertions (after paragraphs have been combined and too early
+% insertions moved to the next page) and also subtracts the flexible
+% glues associated with the insertions' skip registers, so this
+% flexibility is typically negative.
+%    \begin{macrocode}
   \global\advance\FN@vsize\FN@outervsize\relax
   \ifcase
     \ifnum\insertpenalties>\z@ \@ne\fi
@@ -1884,14 +1932,14 @@
 % try to split.
 %    \begin{macrocode}
     \ifdim\FN@vsize>-\gluestretch\FN@vsize
-      \ifdim\dimexpr\FN@vsize-\normalbaselineskip<\glueshrink\FN@vsize
-      \else
+%      \ifdim\dimexpr\FN@vsize-\normalbaselineskip<\glueshrink\FN@vsize
+%      \else
 %    \end{macrocode}
 % page is underfull, and the free space is at least that of a single
 % line.  If we have no special output penalty, gather more material
 %    \begin{macrocode}
         \ifnum\outputpenalty>-\@M \tw@\fi
-      \fi
+%      \fi
     \fi\z@
 %    \end{macrocode}
 % page has appropriate size or we have special penalty.
@@ -1962,6 +2010,8 @@
       \ifvbox\z@
         \MFL@removevboxes
         \unvbox\z@
+        \setbox\z@\lastbox
+        \global\setbox\FN@tempbox\vbox{\unvbox\z@\unvbox\FN@tempbox}%
         \boxmaxdepth\maxdepth\egroup
       \else
         \egroup \global\setbox\@cclv\box\voidb@x
@@ -2103,7 +2153,17 @@
 % we have a dichotomy between current overfull and underfull boxes.
 % At each recursion level, we enter with an overfull configuration
 % that establishes the breakable section for the footnote block in
-% question.  We then construct the footnote block and try splitting it
+% question.
+%
+% Suppose that we have already established a previous best
+% configuration.  When we are recursing, we can only increase the
+% badness (a non-broken insertion box contributes nothing to the
+% overall badness or penalties, breaking the box causes a badness of
+% 10000, minus the break penalty, plus the break badness).  So there
+% is no point in recursing if entry badness and break penalty are as
+% large as the previous best break penalty or more.
+%
+% Ok, so we construct the footnote block and try splitting it
 % to size.  If this
 % gives us a \emph{good} underfull version, we return that (and break
 % out of recursion altogether).  Otherwise we remember the underfull
@@ -2136,10 +2196,9 @@
 % cache box (and, consequentially, from \cmd{\FN@vsize}).
 %
 % \cmd{\FN@vsize}, the amount of free space on the current page, is
-% only updated when changing levels of recursion.  Instead we work
-% with \cmd{\FN@myvsize} in our iterations here, which is set to the
-% absolute maximum of material from this footnote admissable to the
-% page.
+% only updated when changing levels of recursion.  Instead we maintain
+% score of the accumulated size in the current insertion in
+% \cmd{\FN@myvsize}.
 %
 % What about the penalties and badness we collect?  An unsplit
 % footnote block carries a penalty of~0 (so we need not take into
@@ -2157,17 +2216,21 @@
 % and corresponds rather closely to \TeX's own idea of footnote
 % splitting.
 
-% The following routine will analyze a box where the results from
-% \cmd{\splitdiscards} are stored and return the penalty associated
-% with the breakpoint in the global macro \cmd{\FN@breakpenalty}.
+% The following routine will analyze the last box where the results
+% from \cmd{\splitdiscards} are stored and return the penalty
+% associated with the breakpoint in the global macro
+% \cmd{\FN@breakpenalty}.
+% \begin{macro}{\FN@getbreakpenalty}
 %    \begin{macrocode}
-\def\FN@getbreakpenalty#1{{\setbox\z@
-    \vbox{\unvcopy#1%
-      \count@\FN@defaultpenalty
-      \FN@getbreakpenaltyii
-      \xdef\FN@breakpenalty{\number\ifnum\count@>-\@M
-                              \count@
-                             \else -\@M \fi}%
+\def\FN@getbreakpenalty{{\setbox\z@\lastbox
+    \nointerlineskip\copy\z@
+    \setbox\z@
+      \vbox{\unvbox\z@
+        \count@\FN@defaultpenalty
+        \FN@getbreakpenaltyii
+        \xdef\FN@breakpenalty{\number\ifnum\count@>-\@M
+          \count@
+          \else -\@M \fi}%
     }}}
 
 \def\FN@getbreakpenaltyii{%
@@ -2187,6 +2250,7 @@
     \unpenalty \expandafter\FN@getbreakpenaltyii
   \fi}
 %    \end{macrocode}
+% \end{macro}
 % \begin{macro}{\FN@mainsplitreturn}
 %   This is merely an argument delimiting control sequence to make it
 %   possible to figure out which recursion levels still need visiting.
@@ -2195,10 +2259,7 @@
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@myvsize}
-%   This is the size that is yet available for the currently
-%   considered insertion (so it is the size available on the page,
-%   inversely scaled by the insertions fudge factor specified by its
-%   count register).
+%   This is the size currently taken by this insertion.
 %    \begin{macrocode}
 \newdimen\FN@myvsize
 %    \end{macrocode}
@@ -2290,9 +2351,7 @@
 %   for shipout\\
 %   0&box2&the previous best split that was found\\\hline
 %   1&box0&the material that gets worked off, the tail of the split\\
-%   1&box2&where the current split is assigned\\
-%   1&box4&material that was discarded during the split and will
-%   be used to reconstitute the split if it is not taken
+%   1&box2&where the current split is assigned
 % \end{tabularx}
 % The structure of 0/box2 is the head of the split, followed by
 % |\break| penalty, followed by the tail of the split, followed by
@@ -2310,11 +2369,11 @@
       \setbox\z@\lastbox
 %    \end{macrocode}
 % The last box may now be split.  First we note its main id.  Then we
-% include its size into \cmd{\FN@vsize} as we have this much additional
-% space available.
+% calculate \cmd{\FN@myvsize} as the total space taken up by this
+% insertion.  The size of the last box is excluded since it will be
+% split now.
 %    \begin{macrocode}
-      \FN@myvsize=\dimexpr(\FN@vsize-\glueshrink\FN@vsize)%
-        *\@m/\count\FN@currentinsertion-\dimen@+\ht\z@+\dp\z@\relax
+      \FN@myvsize=\dimexpr\dimen@-\ht\z@-\dp\z@\relax
 %    \end{macrocode}
 % Ok, first attempt.  One interesting feature is that we will never
 % have to rewind the boxes from a split: we can always just glue the
@@ -2336,25 +2395,56 @@
 %    \end{macrocode}
 % Now we are building one tentative candidate for returning in
 % |\box\z@|.  It will get discarded in case that a better candidate
-% was already found before this box completes.  At all points of time,
-% \cmd{\prevdepth} is maintained appropriately according to the last
-% insertion.  That way, we can finish the box with an appropriate
-% strut.
+% was already found before this box completes.
 %    \begin{macrocode}
       \setbox\z@
       \vbox\bgroup
-        \setbox4\box\voidb@x
-        \ifnum\FN@currentinsertion=\FN@savebox
-          \setbox\tw@\vsplit\z@ to\dimexpr\FN@myvsize-\splitmaxdepth\relax
-        \else
+%    \end{macrocode}
+% Ok, now stuff gets complicated: for the first, tentatively `optimal'
+% split, we want to have all available page stretchability properly
+% taken into account.  So we take the box, and add the available page
+% stretchability at the top.  Note that the stretchability is
+% registered negatively.
+%    \begin{macrocode}
+        \let\FN@splitcolors\@empty
+        \setbox\z@\vbox{\vskip-\glueexpr(\FN@vsize-\dimexpr\FN@vsize
+          \relax\@minus\glueshrink\FN@vsize)%
+          *\@m/\count\FN@currentinsertion
+          \unvbox\z@}%
+%    \end{macrocode}
+% Ok, now we have pushed the additional available stretch onto the top
+% of box~0.  Now we do the actual split to minimal size.  That means
+% that we don't consider any of the shrinkability available on the
+% page: it might still be better employed in some recursive level.
+%    \begin{macrocode}
+        \setbox\tw@\vsplit\z@ to%
+          \dimexpr\FN@vsize*\@m/\count\FN@currentinsertion
+          -\FN@myvsize-\splitmaxdepth
+        \relax
+%    \end{macrocode}
+% Ok, now the top of box~2 contains unwanted additional
+% stretchability.  The easiest way to get rid of it is by adding its
+% negation.
+%    \begin{macrocode}
+        \setbox\tw@\vbox{%
+          \vskip\glueexpr(\FN@vsize-\dimexpr\FN@vsize
+          \relax\@minus\glueshrink\FN@vsize)%
+          *\@m/\count\FN@currentinsertion
+          \unvbox\tw@\boxmaxdepth\splitmaxdepth}%
+%    \end{macrocode}
+% Ok, now rinse and repeat if we don't have reached the last footnote
+% in the block.
+%    \begin{macrocode}
+        \ifnum\FN@currentinsertion=\FN@savebox \else
+          \ifnum0\splitbotmarks\FN@master=\FN@masterslot \else
           \loop
-            \let\FN@splitcolors\@empty
-            \setbox\tw@\vsplit\z@ to\dimexpr\FN@myvsize-\splitmaxdepth\relax
-          \ifnum0\splitbotmarks\FN@master=\FN@masterslot
-          \else
             \FN@contribute@tw@
+            \let\FN@splitcolors\@empty
+            \setbox\tw@\vsplit\z@ to\z@
+           \ifnum0\splitbotmarks\FN@master=\FN@masterslot
+           \else
           \repeat
-        \fi
+        \fi\fi
 %    \end{macrocode}
 % All of the above was necessary to ensure that we actually have the
 % beginning of the relevant footnote in our material.  From now on,
@@ -2377,8 +2467,8 @@
 %    \end{macrocode}
 % At this point of time, we have \cmd{\FN@masterid} set properly for
 % our purposes.  It is to be used for returning any \emph{tail} part
-% of a box.  \cmd{\FN@slaveid} is by necessity not empty (as long as
-% we are not talking about the main vertical list).  If any footnote
+% of a box.  \cmd{\FN@slaveid} is by necessity not empty.  If any
+% footnote
 % has had its mark broken off, its id must be in the open range
 % between \cmd{\FN@slaveid} and \cmd{\FN@masterid}.  So a nonempty
 % value of \cmd{\FN@next} at this point of time indicates that we have
@@ -2401,8 +2491,6 @@
 % Ok, we had a compulsory change in configuration.  Reconfigure.
 %    \begin{macrocode}
     \let\FN@slaveid\FN@next
-    \FN@myvsize\dimexpr\FN@myvsize-%
-      (\FN@vsize-\glueshrink\FN@vsize)*\@m/\count\FN@currentinsertion\relax
     \xdef\FN@config{%
       \@elt{\FN@slaveid}%
         {\FN@masterid}%
@@ -2410,10 +2498,8 @@
     \let\@elt\FN@reconfig
     \FN@currentrecursion
     \let\@elt\relax
-    \FN@myvsize\dimexpr\FN@myvsize+%
-      (\FN@vsize-\glueshrink\FN@vsize)*\@m/\count\FN@currentinsertion\relax
   \fi
-  \FN@getbreakpenalty4%
+  \FN@getbreakpenalty
   \xdef\FN@badness{\number\numexpr\FN@entrybadness+\@M+\FN@breakpenalty}%
   \let\FN@next\FN@breakpenalty
 %    \end{macrocode}
@@ -2428,38 +2514,33 @@
 %    \end{macrocode}
 % are we overfull?  If so, recurse once for getting better.
 %    \begin{macrocode}
-    \ifdim\FN@myvsize<\z@
-      \advance\FN@myvsize-\dimexpr
-        (\FN@vsize-\glueshrink\FN@vsize)%
-         *\@m/\count\FN@currentinsertion\relax
-      \global\advance\FN@vsize\dimexpr\FN@myvsize
-        *\count\FN@currentinsertion/\@m\relax\relax
+    \ifdim\dimexpr\FN@myvsize*\count\FN@currentinsertion/\@m
+      >\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
+      \global\advance\FN@vsize-\glueexpr\FN@myvsize
+        *\count\FN@currentinsertion/\@m\relax
       \let\@elt\FN@newlevel
       \FN@currentrecursion\FN@mainsplitreturn
       \let\@elt\relax
-      \global\advance\FN@vsize-\dimexpr\FN@myvsize
-        *\count\FN@currentinsertion/\@m\relax\relax
-      \advance\FN@myvsize\dimexpr
-        (\FN@vsize-\glueshrink\FN@vsize)%
-        *\@m/\count\FN@currentinsertion\relax
+      \global\advance\FN@vsize\glueexpr\FN@myvsize
+        *\count\FN@currentinsertion/\@m\relax
     \fi
   \fi
   \global\let\FN@breakpenalty\FN@next
-  \xdef\FN@badness{\number\numexpr\FN@badness-\FN@breakpenalty}%
 %    \end{macrocode}
 % At this point of time, everything to get an overfull box averted has
-% been attempted already.  Any material that would be taken over from
-% the next page will add at least a full line height to what we have
-% already, so we don't bother unless we have room for that.
+% been attempted already.  If we are still overfull, there is nothing
+% else to do and we are finished.  If we are not overfull, we continue
+% adding material.
 %    \begin{macrocode}
-  \ifdim\FN@myvsize<\dimexpr\splitmaxdepth+\splittopskip\relax
-    \skip@\glueexpr\FN@vsize+(\dimexpr\FN@myvsize
-      -(\FN@vsize-\glueshrink\FN@vsize)%
-       *\@m/\count\FN@currentinsertion)%
-     *\count\FN@currentinsertion/\@m\relax
+  \ifdim\dimexpr\FN@myvsize
+      *\count\FN@currentinsertion/\@m
+    >\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
+    \skip@\glueexpr\FN@vsize
+      -\FN@myvsize*\count\FN@currentinsertion/\@m\relax
     \FN@getbadness\skip@
     \expandafter\FN@returnbest
   \else
+    \xdef\FN@badness{\number\numexpr\FN@badness-\FN@breakpenalty}%
     \expandafter\FN@addmaterial
   \fi}
 %    \end{macrocode}
@@ -2474,10 +2555,9 @@
 %    \begin{macrocode}
 \def\FN@returnbest{%
   \skip@\FN@bestvsize\relax
-  \dimen@\dimexpr\FN@vsize+(\dimexpr\FN@myvsize
-      -(\FN@vsize-\glueshrink\FN@vsize)%
-       *\@m/\count\FN@currentinsertion)%
-     *\count\FN@currentinsertion/\@m\relax
+  \dimen@\dimexpr\FN@vsize
+                 -\FN@myvsize
+                  *\count\FN@currentinsertion/\@m\relax
   \ifnum\badness>\@M
 %    \end{macrocode}
 % Overfull boxes are considered terrible.
@@ -2523,9 +2603,7 @@
 %    \begin{macrocode}
   \else
     \xdef\FN@badness{\number\numexpr\FN@badness+\FN@breakpenalty}%
-    \global\advance\FN@vsize\dimexpr(\FN@myvsize
-      -(\FN@vsize-\glueshrink\FN@vsize)%
-       *\@m/\count\FN@currentinsertion)%
+    \global\advance\FN@vsize-\dimexpr\FN@myvsize
      *\count\FN@currentinsertion/\@m\relax\relax
 %    \end{macrocode}
 % Now box~0 is the box we need to carry to the next page.  Prepare
@@ -2591,7 +2669,9 @@
 % \begin{macro}{\FN@addmaterial}
 %    \begin{macrocode}
 \def\FN@addmaterial{%
-  \setbox\tw@\vsplit\z@ to\dimexpr\FN@myvsize-\splitmaxdepth\relax
+  \setbox\tw@\vsplit\z@ to\dimexpr
+    (\FN@vsize-\gluestretch\FN@vsize)*\@m/\count\FN@currentinsertion
+    -\FN@myvsize-\splitmaxdepth\relax
   \ifcase\ifvoid\tw@ \@ne\fi
   \ifnum\badness>\@M \@ne\fi\z@
     \edef\FN@next{\splitbotmarks\FN@slave}%
@@ -2637,11 +2717,9 @@
   \fi}
 
 \def\FN@recordbest{%
-  \skip@\glueexpr\FN@vsize+(\dimexpr\FN@myvsize
-    -(\FN@vsize-\glueshrink\FN@vsize)%
-     *\@m/\count\FN@currentinsertion)%
+  \skip@\glueexpr\FN@vsize-\FN@myvsize
    *\count\FN@currentinsertion/\@m\relax
-  \FN@getbreakpenalty4%
+  \FN@getbreakpenalty
   \FN@getbadness\skip@
   \ifnum\badness>\@M
     \edef\FN@ebadness{\number\numexpr\maxdimen-\@ne}%
@@ -2692,9 +2770,7 @@
         \def\noexpand\FN@bestslaveid{\FN@slaveid}%
         \def\noexpand\FN@bestsplitcolors{\FN@splitcolors}%
         \FN@myvsize=\the\FN@myvsize\relax}%
-      \dimen@\prevdepth
-      \global\setbox\FN@tempbox\vbox{\box4\nointerlineskip\box\z@
-        \kern\dimen@}%
+      \global\setbox\FN@tempbox\box\z@
       \egroup
       \FN@tempinfo
       \let\FN@splitcolors\FN@bestsplitcolors
@@ -2707,41 +2783,24 @@
 % This is then followed by a zero kern, and then by pairs of boxes and
 % penalties indicating the swept box.
 %    \begin{macrocode}
-      \setbox\tw@\vbox{\unvcopy\FN@tempbox \unkern
-        \setbox\tw@\lastbox \setbox4\lastbox
-%<trace>  \ifnum\lastnodetype>\m@ne
-%<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
+      \setbox\tw@\vbox{%
 %    \end{macrocode}
-% Now the list is empty, and we start building it up by starting with
-% the old box, protection, and the cut off stuff.  |\box4| is not
-% needed in here, it is discarded.  We don't need to place
-% master/slave marks here: the necessary information is available
-% outside in the \cmd{\FN@masterslot} and \cmd{\FN@slaveid} info and
-% gets attached afterwards.
+% We don't need to place master/slave marks here: the necessary
+% information is available outside in the \cmd{\FN@masterslot} and
+% \cmd{\FN@slaveid} info and gets attached afterwards.
 %    \begin{macrocode}
-        \nointerlineskip\copy\z@\break\nointerlineskip
-        \box\tw@\penalty\FN@tempbox
+        \copy\z@\break\nointerlineskip
+        \copy\FN@tempbox\penalty\FN@tempbox
         \let\@elt\FN@cachesize
-        \advance\FN@myvsize-\dimexpr
-          (\FN@vsize-\glueshrink\FN@vsize)%
-           *\@m/\count\FN@currentinsertion\relax
         \global\advance\FN@vsize\glueexpr\z@skip\FN@currentrecursion\relax
         \let\@elt\FN@sweepcachebox
         \FN@currentrecursion
-        \advance\FN@myvsize\dimexpr
-          (\FN@vsize-\glueshrink\FN@vsize)%
-          *\@m/\count\FN@currentinsertion\relax
         \xdef\FN@tempinfo{\FN@myvsize=\the\FN@myvsize\relax}}%
       \FN@tempinfo
       \setbox\z@
-      \vbox\bgroup\unvbox\FN@tempbox 
-        \prevdepth\lastkern \unkern
-        \setbox\tw@\lastbox
-        \setbox4\lastbox
-%<trace>  \ifnum\lastnodetype>\m@ne
-%<trace>    \errmessage{Unexpected node \number\lastnodetype}\fi
+      \vbox\bgroup
         \unvbox\z@
-        \setbox\z@\box\tw@
+        \setbox\z@\box\FN@tempbox
     \fi
     \loop
       \setbox\tw@\vsplit\z@ to\z@
@@ -2757,11 +2816,10 @@
   \fi}
 %    \end{macrocode}
 % \begin{macro}{\FN@contribute@tw@}
-%   This will go from the state where we have the
-%   previous \cmd{\splitdiscards} in box~4 and some material split off
-%   from box~0 in box~2 to a state where box~2 is contributed to the
-%   current list, if necessary extended by a strut to achieve the
-%   maximal depth.
+%   This will go from the state where we have the previous
+%   \cmd{\splitdiscards} struttified on the current list some material
+%   split off from box~0 in box~2 to a state where box~2 is
+%   contributed to the current list.
 %    \begin{macrocode}
 \def\FN@contribute@tw@{%
 %    \end{macrocode}
@@ -2772,20 +2830,25 @@
   \ifx\FN@next\@empty \endgroup\else \endgroup
     \edef\FN@splitcolors{\splitbotmarks\FN@color}\fi
 %    \end{macrocode}
-% If box~4 is void, there is nothing from a previous split to
-% reconstitute.
+% If the last box is void, there is no previous split to reconstitute.
 %    \begin{macrocode}
+  \setbox4\lastbox
   \ifvoid4 \setbox4\vbox{\splitdiscards}%
-     \setbox\tw@\vbox{\unvbox\tw@}%
+     \setbox\tw@\vbox{\unvbox\tw@\boxmaxdepth\splitmaxdepth}%
   \else
+%    \end{macrocode}
+% Now the last box is a strut.  We remove its outer dimensions from
+% the total account, and then add back its natural dimensions after
+% which we pour it back into the current list.
+%    \begin{macrocode}
+    \advance\FN@myvsize-\dimexpr\ht4+\dp4\relax
+    \setbox4\vbox{\unvbox4}%
+    \advance\FN@myvsize\dimexpr\ht4+\dp4\relax
+    \unvbox4
 %    \end{macrocode}
 % We want to contribute box~2 back without any topskip glue, so we
 % manually remove any such glue by splitting an empty box off.
 %    \begin{macrocode}
-    \advance\FN@myvsize\dimexpr
-      \ifdim\prevdepth<\splitmaxdepth \splitmaxdepth-\prevdepth \fi
-      -\ht4\relax
-    \unvbox4
     \setbox4\vbox{\splitdiscards}%
     \setbox\tw@\vbox{\break\unvbox\tw@}%
     {\splittopskip-\maxdimen \setbox\tw@\vsplit\tw@ to\z@}%
@@ -2798,16 +2861,18 @@
 % After the split, box~2 is set to the natural depth and height of
 % its contents.
 %
+% We now add a sort of strut by putting all the discarded material
+% inside of a box that creates the proper size.
 % If this split is taken, the box is adjusted to have a full depth of
 % \cmd{\splitmaxdepth}, and we take this into account.
 %    \begin{macrocode}
   \fi
-  \advance\FN@myvsize-\dimexpr \ht\tw@+\dp\tw@\relax
-  \prevdepth=\dp\tw@
+  \ht4-\dp\tw@
+  \dp4\ifdim\dp\tw@<\splitmaxdepth \splitmaxdepth \else \dp\tw@ \fi
+  \advance\FN@myvsize\dimexpr \ht\tw@+\dp4\relax
   \unvbox\tw@
-  \ifdim\prevdepth<\splitmaxdepth
-    \advance\FN@myvsize-\dimexpr \splitmaxdepth-\prevdepth \relax
-  \fi}
+  \nointerlineskip
+  \box4 }
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@uncontribute@tw@}
