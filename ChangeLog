@@ -1,3 +1,8 @@
+2006-01-08  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Use the right sign of gluestretch in
+	`\FN@addmaterial'.
+
 2006-01-05  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Change bookkeeping of splitdiscards in order to

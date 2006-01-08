@@ -99,8 +99,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/01/05 19:13:08 $
-  \FN@next $Revision: 1.17 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/01/08 12:42:37 $
+  \FN@next $Revision: 1.18 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -2667,10 +2667,13 @@
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@addmaterial}
+%  Note that \cmd{\gluestretch} is usually negative, so we reduce the
+%  size to which we split for the purpose of getting the minimum
+%  amount of material here.
 %    \begin{macrocode}
 \def\FN@addmaterial{%
   \setbox\tw@\vsplit\z@ to\dimexpr
-    (\FN@vsize-\gluestretch\FN@vsize)*\@m/\count\FN@currentinsertion
+    (\FN@vsize+\gluestretch\FN@vsize)*\@m/\count\FN@currentinsertion
     -\FN@myvsize-\splitmaxdepth\relax
   \ifcase\ifvoid\tw@ \@ne\fi
   \ifnum\badness>\@M \@ne\fi\z@
