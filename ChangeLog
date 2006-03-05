@@ -1,3 +1,13 @@
+2006-03-05  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Cater for useful slave id at start of document.
+
+2006-03-05  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Lots of changes, change of algorithm.  Now we
+	should have optimal breakpoints chosen (before there was an
+	overfilling algorithm).
+
 2006-01-08  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Use the right sign of gluestretch in

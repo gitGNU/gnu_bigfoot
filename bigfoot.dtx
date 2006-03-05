@@ -99,8 +99,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/03/05 12:56:10 $
-  \FN@next $Revision: 1.19 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/03/05 16:20:43 $
+  \FN@next $Revision: 1.20 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -2499,7 +2499,7 @@
         \ifx\FN@slaveid\@empty
 %<trace>  \ifnum\FN@currentinsertion=\FN@savebox\else
 %<trace>    \errmessage{Missing slaveid in \FN@currentinsertion}\fi
-          \edef\FN@slaveid{\topmarks\FN@slave}%
+          \edef\FN@slaveid{\number0\topmarks\FN@slave}%
         \fi
         \FN@contribute@tw@
         \ifnum\numexpr\FN@slaveid+\@ne<\FN@masterid
