@@ -99,8 +99,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/01/08 12:42:37 $
-  \FN@next $Revision: 1.18 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/03/05 12:56:10 $
+  \FN@next $Revision: 1.19 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -693,7 +693,7 @@
 % start of such a box.  We will back up its height again.  Some
 % packages specify a |\hangindent| (I~know of no examples where they
 % would actually set |\hangafter| to a value different from its
-% default of~1, or set |\hangindent| to e negative value which would
+% default of~1, or set |\hangindent| to a negative value which would
 % affect the right margin): due to our artifical line at the top, the
 % indent will actually be active for the first line already.  We back
 % it out of the actual labels happening at the start of the line.
@@ -1511,6 +1511,10 @@
   \box\FN@cache#2%
   \penalty\FN@cache#2}
 
+\def\FN@copycachebox#1#2{\nointerlineskip
+  \copy\FN@cache#2%
+  \penalty\FN@cache#2}
+
 \def\FN@restoreboxes{\count@\lastpenalty \unpenalty
   \ifnum\count@>\z@
     \global\setbox\count@\lastbox
@@ -1834,28 +1838,26 @@
 % Ok, now we reconstruct the box from its parts.  We add the material
 % together, taking the previous output penalty and the current page
 % discards for glueing the stuff together.  The previous output
-% penalty then is irrelevant for further purposes and we replace it by
-% the code for ``nonexistent''.  \cmd{\FN@outervsize} has been
+% penalty then is irrelevant for further purposes and we replace it
+% again.  \cmd{\FN@outervsize} has been
 % adjusted by the accumulated contributions of insertions to the page
 % size.  Fiddling with it would not appear necessary or even prudent.
 %    \begin{macrocode}
-      \ifvoid\@cclv
-        \global\setbox\@cclv\box\z@
-      \else
-        \global\setbox\@cclv\vbox{\unvbox\z@
-          \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
-          \pagediscards
+      \global\setbox\@cclv\vbox{\unvbox\z@
+        \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
+        \pagediscards
 %    \end{macrocode}
 % Now we might have had a \cmd{\topskip} value designed for requesting
 % a given number of lines.  We need to remove anything of that kind.
 % Splitting again achieves that.
 %    \begin{macrocode}
+        \ifvbox\@cclv
           \global\setbox\@cclv\vbox{\break\unvbox\@cclv}%
           {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}%
           \unvbox\@cclv
-          \boxmaxdepth\maxdepth}%
-      \fi
-      \global\outputpenalty\@M
+        \fi
+        \boxmaxdepth\maxdepth}%
+      \global\outputpenalty\FN@outputpenalty\relax
 %    \end{macrocode}
 % Ok, now if \cmd{\topskip} is actually \emph{positive}, we have been
 % collecting material tentatively without having proper marks.  We
@@ -1940,10 +1942,13 @@
 %    \begin{macrocode}
         \ifnum\outputpenalty>-\@M \tw@\fi
 %      \fi
-    \fi\z@
+    \fi
 %    \end{macrocode}
-% page has appropriate size or we have special penalty.
+% page has appropriate size or we have special penalty.  If we have
+% come here not the first time, we might have arrived at a non-optimal
+% break.  So we attempt a split.
 %    \begin{macrocode}
+    \ifx\FN@vsadjustlist\@empty \else \thr@@\fi\z@
     \ifvbox\@cclv
       {\vbadness\maxdimen
         \global\setbox\@cclv\vbox
@@ -2007,14 +2012,16 @@
         \global\setbox\FN@tempbox\box\voidb@x
       \fi
       \setbox\z@\lastbox
-      \ifvbox\z@
+      \ifvoid\z@
+        \egroup \global\setbox\@cclv\box\voidb@x
+      \else
         \MFL@removevboxes
         \unvbox\z@
         \setbox\z@\lastbox
-        \global\setbox\FN@tempbox\vbox{\unvbox\z@\unvbox\FN@tempbox}%
+        \ifvoid\z@ \else
+          \global\setbox\FN@tempbox\vbox{\unvbox\z@\unvbox\FN@tempbox}%
+        \fi
         \boxmaxdepth\maxdepth\egroup
-      \else
-        \egroup \global\setbox\@cclv\box\voidb@x
       \fi
     \vbadness\count@
     \setbox\z@
@@ -2226,12 +2233,12 @@
     \nointerlineskip\copy\z@
     \setbox\z@
       \vbox{\unvbox\z@
-        \count@\FN@defaultpenalty
+        \count@\FN@defaultpenalty\relax
         \FN@getbreakpenaltyii
-        \xdef\FN@breakpenalty{\number\ifnum\count@>-\@M
-          \count@
-          \else -\@M \fi}%
-    }}}
+        \xdef\FN@tempinfo{\edef\noexpand\FN@breakpenalty{%
+            \number\ifnum\count@>-\@M \count@
+                   \else -\@M \fi}}}}%
+  \FN@tempinfo}
 
 \def\FN@getbreakpenaltyii{%
   \ifcase
@@ -2361,19 +2368,42 @@
 % |\FN@restoreboxes|.
 %    \begin{macrocode}
     \global\setbox\count@\vbox\bgroup\unvbox\count@
+%    \end{macrocode}
+% We calculate \cmd{\FN@myvsize} as the total space taken up by this
+% insertion.  The size of the last box is excluded since it will be
+% split now.
+%    \begin{macrocode}
+      \ifnum\lastpenalty=\z@
+        \setbox\tw@\box\voidb@x
+        \setbox\z@\lastbox
+        \FN@myvsize=\dimexpr\dimen@-\ht\z@-\dp\z@\relax
+      \else
+%    \end{macrocode}
+% Now if the box has been split previously, we glue it back together
+% again.
+%    \begin{macrocode}
+        \unpenalty
+        \setbox\tw@\lastbox
+        \setbox\z@\lastbox
+        \FN@myvsize=\dimexpr\dimen@-\ht\z@-\dp\z@\relax
+        \dimen@\dp\z@
+        \setbox\z@{\unvbox\z@
+          \setbox\z@\lastbox
+          \unvbox\z@
+          \unvbox\tw@}%
+        \ht\z@=\dimexpr\ht\z@+\dp\z@-\dimen@\relax
+        \dp\z@\dimen@
+      \fi
+%    \end{macrocode}
+% Ok, size is all accounted for.  Go on with optimization.  Note that
+% these definitions here are made in \emph{inner} level, so they can't
+% make it outside as the result of the optimization.  If we drop out
+% of here without superceding them, something's completely rotten.
+%    \begin{macrocode}
       \edef\FN@bestebadness{\number\maxdimen}%
       \let\FN@bestconfig\@undefined
       \let\FN@bestvsize\z@skip
       \let\FN@splitcolors\@empty
-      \setbox\tw@\box\voidb@x
-      \setbox\z@\lastbox
-%    \end{macrocode}
-% The last box may now be split.  First we note its main id.  Then we
-% calculate \cmd{\FN@myvsize} as the total space taken up by this
-% insertion.  The size of the last box is excluded since it will be
-% split now.
-%    \begin{macrocode}
-      \FN@myvsize=\dimexpr\dimen@-\ht\z@-\dp\z@\relax
 %    \end{macrocode}
 % Ok, first attempt.  One interesting feature is that we will never
 % have to rewind the boxes from a split: we can always just glue the
@@ -2410,7 +2440,11 @@
         \setbox\z@\vbox{\vskip-\glueexpr(\FN@vsize-\dimexpr\FN@vsize
           \relax\@minus\glueshrink\FN@vsize)%
           *\@m/\count\FN@currentinsertion
-          \unvbox\z@}%
+          \unvbox\z@
+          \ifnum\FN@defaultpenalty>-\@M
+            \penalty\FN@defaultpenalty\nointerlineskip
+            \vbox to\maxdimen{}%
+          \fi}%
 %    \end{macrocode}
 % Ok, now we have pushed the additional available stretch onto the top
 % of box~0.  Now we do the actual split to minimal size.  That means
@@ -2421,6 +2455,15 @@
           \dimexpr\FN@vsize*\@m/\count\FN@currentinsertion
           -\FN@myvsize-\splitmaxdepth
         \relax
+        \ifnum\FN@defaultpenalty>-\@M
+          \setbox\z@\vbox\bgroup\unvbox\z@\setbox\z@\lastbox
+            \unpenalty
+            \ifnum\lastnodetype<\z@
+              \egroup \setbox\z@\box\voidb@x
+            \else
+              \egroup
+            \fi
+        \fi
 %    \end{macrocode}
 % Ok, now the top of box~2 contains unwanted additional
 % stretchability.  The easiest way to get rid of it is by adding its
@@ -2478,115 +2521,217 @@
         \FN@splitfurther}
 %    \end{macrocode}
 % \end{macro}
+% \begin{macro}{\FN@vsizerecurse}
+% This fixes the vertical size up and recurses once.
+%    \begin{macrocode}
+\def\FN@vsizerecurse{%
+    \global\advance\FN@vsize
+      -\dimexpr\FN@myvsize*\count\FN@currentinsertion/\@m \relax\relax
+    \let\@elt\FN@newlevel
+    \FN@currentrecursion\FN@mainsplitreturn
+    \let\@elt\relax
+    \global\advance\FN@vsize
+      \dimexpr\FN@myvsize*\count\FN@currentinsertion/\@m \relax\relax}
+%    \end{macrocode}
+% \end{macro}
+% 
 % \subsubsection{Main label for reconsideration}
-% We are after a split to size without configuration change, or a
-% split that caused a configuration change and was reverted for a slow
-% motion split.  So whatever we do now up to the next configuration
-% change will happen in slow motion.
+% When we are here, then there is not yet a split in the next footnote
+% blocks scheduled.  We might have to restitch stuff together here,
+% though.
+% \begin{macro}{\FN@splitfurther}
 %    \begin{macrocode}
 \def\FN@splitfurther{%
-  \ifx\FN@next\@empty
-  \else
+  \ifx\FN@next\@empty \else \let \FN@slaveid\FN@next \fi
 %    \end{macrocode}
-% Ok, we had a compulsory change in configuration.  Reconfigure.
+% Ok, if our configuration now differs from the last one for which we
+% have cache boxes set up, we have to reconfigure.  It it doesn't, we
+% just stitch the boxes together again in order to have correct size
+% info.
 %    \begin{macrocode}
-    \let\FN@slaveid\FN@next
-    \xdef\FN@config{%
-      \@elt{\FN@slaveid}%
-        {\FN@masterid}%
-      \FN@entryconfig}%
+  \let\FN@next\FN@config
+  \xdef\FN@config{%
+    \@elt{\FN@slaveid}%
+    {\FN@masterid}%
+    \FN@entryconfig}%
+  \ifx\FN@next\FN@config
+    \let\@elt\FN@rejoin
+  \else
     \let\@elt\FN@reconfig
-    \FN@currentrecursion
-    \let\@elt\relax
   \fi
-  \FN@getbreakpenalty
-  \xdef\FN@badness{\number\numexpr\FN@entrybadness+\@M+\FN@breakpenalty}%
-  \let\FN@next\FN@breakpenalty
+  \FN@currentrecursion
+  \let\@elt\relax
+%    \end{macrocode}
+% Ok, now we check whether the current configuration is a match for
+% the best previous one.  Also we calculate the badness of the current
+% situation.
+%    \begin{macrocode}
+  \xdef\FN@badness{\number\FN@entrybadness}%
+  \FN@checkcurrent
 %    \end{macrocode}
 % No point in recursing if we can't beat the current best one.
 % However, if we find a forced break, this is considered perfect as
-% long as we are not overfull.
+% long as we are not overfull.  Note that recursion can only increase
+% the badness if we are still underfull here.
+%    \begin{macrocode}
+  \ifnum
+    \ifdim\skip@>\z@ \FN@ebadness \else \FN@badness \fi >\FN@bestebadness
+  \else
+    \xdef\FN@badness{\number\FN@entrybadness}%
+    \FN@vsizerecurse
+    \FN@checkcurrent
+  \fi
+%    \end{macrocode}
+% Don't look further if we had a forced break or are overfull or are
+% at the end of the list.
 %    \begin{macrocode}
   \ifcase
     \ifnum\FN@breakpenalty>-\@M \else \@ne \fi
-    \ifnum\FN@badness<\FN@bestebadness \@ne \fi
-  \z@\or
-%    \end{macrocode}
-% are we overfull?  If so, recurse once for getting better.
-%    \begin{macrocode}
-    \ifdim\dimexpr\FN@myvsize*\count\FN@currentinsertion/\@m
-      >\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
-      \global\advance\FN@vsize-\glueexpr\FN@myvsize
-        *\count\FN@currentinsertion/\@m\relax
-      \let\@elt\FN@newlevel
-      \FN@currentrecursion\FN@mainsplitreturn
-      \let\@elt\relax
-      \global\advance\FN@vsize\glueexpr\FN@myvsize
-        *\count\FN@currentinsertion/\@m\relax
-    \fi
-  \fi
-  \global\let\FN@breakpenalty\FN@next
-%    \end{macrocode}
-% At this point of time, everything to get an overfull box averted has
-% been attempted already.  If we are still overfull, there is nothing
-% else to do and we are finished.  If we are not overfull, we continue
-% adding material.
-%    \begin{macrocode}
-  \ifdim\dimexpr\FN@myvsize
-      *\count\FN@currentinsertion/\@m
-    >\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
-    \skip@\glueexpr\FN@vsize
-      -\FN@myvsize*\count\FN@currentinsertion/\@m\relax
-    \FN@getbadness\skip@
-    \expandafter\FN@returnbest
+    \ifvoid\z@ \@ne \fi
+    \ifnum\badness<\@MM \else \@ne \fi
+    \tw@
+  \or
+    \expandafter \FN@returnbest
   \else
-    \xdef\FN@badness{\number\numexpr\FN@badness-\FN@breakpenalty}%
-    \expandafter\FN@addmaterial
+    \FN@mayberecordbest
+    \setbox\tw@\vsplit\z@ to\z@
+    \edef\FN@next{\splitbotmarks\FN@slave}%
+    \FN@contribute@tw@
+    \expandafter \FN@splitfurther
   \fi}
-%    \end{macrocode}
-% \begin{macro}{\FN@returnbest}
-%   This macro will return the current split or the previous best.
-%   Where the conditionals end at the end of the function, we have
-%   either a split box, which has its top part in |\box\z@| and its
-%   bottom part in |\box\FN@tempbox|, or we have just the top part in
-%   |\box\z@|.  At the time |\FN@returnbest| is called, we have a list
-%   being assembled in |\box\z@|.  All the ``best'' variables are
-%   defined in the outer level already.
+% \end{macro}
+% \begin{macro}{\FN@checkcurrent}
+%   Check out the badness of the current configuration.
 %    \begin{macrocode}
-\def\FN@returnbest{%
-  \skip@\FN@bestvsize\relax
-  \dimen@\dimexpr\FN@vsize
-                 -\FN@myvsize
-                  *\count\FN@currentinsertion/\@m\relax
+\def\FN@checkcurrent{%
+  \skip@\glueexpr\FN@vsize-\FN@myvsize
+   *\count\FN@currentinsertion/\@m\relax
+  \FN@getbreakpenalty
+  \FN@getbadness\skip@
+  \xdef\FN@badness{\number\numexpr\FN@badness+%
+    \FN@breakpenalty+\@M}%
   \ifnum\badness>\@M
-%    \end{macrocode}
-% Overfull boxes are considered terrible.
-%    \begin{macrocode}
-    \def\FN@ebadness{\number\numexpr\maxdimen-\@ne}%
+    \edef\FN@ebadness{\number\numexpr\maxdimen-\@ne}%
   \else
     \ifnum\badness=\@M
       \edef\FN@ebadness{\number\numexpr\maxdimen-\tw@}%
     \else
-      \edef\FN@ebadness{\number\numexpr\FN@badness+\FN@breakpenalty+\badness}%
+      \edef\FN@ebadness{\number\numexpr
+        \FN@badness+\badness}%
     \fi
   \fi
-  \ifcase
-    \ifnum\FN@bestebadness<\FN@ebadness \@ne\fi
-    \ifnum\FN@bestebadness>\FN@ebadness \tw@\fi
-    \ifdim\dimen@<\z@
+  \dimen@\glueexpr\FN@bestvsize\relax
+}
 %    \end{macrocode}
-% Among the overfull boxes, the least overfull is king.
+% \end{macro}
+% \begin{macro}{\FN@checkforbest}
+%   This generates 2 if the old stored best is better, 1~if the
+%   current variation is better.
 %    \begin{macrocode}
-      \ifdim\skip@>\dimen@ \@ne \fi \tw@
+\def\FN@checkforbest{%
+    \ifnum\FN@breakpenalty>-\@M \else
+      \ifnum\badness>\@M \else
+         \@ne
+      \fi
     \fi
 %    \end{macrocode}
-% Among the equally bad underfull boxes, prefer the fuller one.
+% Ok, so the split was not as good as to cause us to return
+% immediately, and it also was not the last opportunity for a split
+% (which again would make us return immediately).
+% So we check if it is at least better than the last one, in which
+% case we need to replace the previous best.
 %    \begin{macrocode}
-    \ifdim\skip@<\dimen@ \@ne \fi \tw@
-  \or
+    \ifnum\FN@bestebadness>\FN@ebadness \@ne\fi
+    \ifnum\FN@bestebadness<\FN@ebadness \tw@\fi
+    \ifdim\skip@<\z@
+      \ifdim\dimen@<\skip@ \@ne \else \tw@\fi
+    \fi
+    \ifdim\dimen@>\skip@ \@ne\fi \tw@}
+%    \end{macrocode}   
+% \end{macro}
+% \begin{macro}{\FN@mayberecordbest}
+%   This checks whether the current configuration is better than a
+%   previously saved one.  If it is, the previous configuration gets
+%   replaced.  The cache boxes itself are copied, not voided in the
+%   process for efficiency reasons.
+%    \begin{macrocode}
+\def\FN@mayberecordbest{%
 %    \end{macrocode}
-% This is variant one of two.  The previous champion is better.
+% If the current break is forced and the page is not overfull, we take
+% the break.
 %    \begin{macrocode}
+  \ifcase
+    \FN@checkforbest
+  \or
+    \xdef\FN@tempinfo{\def\noexpand\FN@bestvsize{\the\skip@}%
+      \def\noexpand\FN@bestebadness{\FN@ebadness}%
+      \def\noexpand\FN@bestbadness{\number\FN@badness}%
+      \def\noexpand\FN@bestconfig{\FN@config}%
+      \def\noexpand\FN@bestslaveid{\FN@slaveid}%
+      \def\noexpand\FN@bestsplitcolors{\FN@splitcolors}%
+      \def\noexpand\FN@breakpenalty{\FN@breakpenalty}%
+      \FN@myvsize=\the\FN@myvsize\relax}%
+    \global\setbox\FN@tempbox\box\z@
+    \egroup
+    \FN@tempinfo
+    \let\FN@splitcolors\FN@bestsplitcolors
+    \let\FN@slaveid\FN@bestslaveid
+%    \end{macrocode}
+% Now all relevant info has been retrieved, and we collect the best
+% box info in |\box\tw@|.  The structure of the information is as
+% follows: it starts with the current box in split form, first the
+% tail, then the start of the current split box.
+% This is then followed by a zero kern, and then by pairs of boxes and
+% penalties indicating the swept box.
+%    \begin{macrocode}
+    \setbox\tw@\vbox{%
+%    \end{macrocode}
+% We don't need to place master/slave marks here: the necessary
+% information is available outside in the \cmd{\FN@masterslot} and
+% \cmd{\FN@slaveid} info and gets attached afterwards.
+%    \begin{macrocode}
+      \copy\z@\break\nointerlineskip
+      \copy\FN@tempbox\penalty\FN@tempbox
+      \let\@elt\FN@copycachebox
+      \FN@currentrecursion
+      \xdef\FN@tempinfo{\FN@myvsize=\the\FN@myvsize\relax}}%
+    \FN@tempinfo
+    \setbox\z@
+    \vbox\bgroup
+      \unvbox\z@
+      \setbox\z@\box\FN@tempbox
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\FN@returnbest}
+%    \begin{macrocode}
+\def\FN@returnbest{%
+  \ifcase\FN@checkforbest
+  \or
+    \xdef\FN@tempinfo{\def\noexpand\FN@bestvsize{\the\skip@}%
+      \def\noexpand\FN@bestebadness{\FN@ebadness}%
+      \def\noexpand\FN@bestbadness{\number\FN@badness}%
+      \def\noexpand\FN@bestconfig{\FN@config}%
+      \def\noexpand\FN@bestslaveid{\FN@slaveid}%
+      \def\noexpand\FN@bestsplitcolors{\FN@splitcolors}%
+      \def\noexpand\FN@breakpenalty{\FN@breakpenalty}%
+      \FN@myvsize=\the\FN@myvsize\relax}%
+    \global\setbox\FN@tempbox\box\z@
+    \egroup
+    \FN@tempinfo
+    \let\FN@splitcolors\FN@bestsplitcolors
+    \let\FN@slaveid\FN@bestslaveid
+    \global\FN@vsize\FN@bestvsize\relax
+%    \end{macrocode}
+% Now all relevant info has been retrieved, and we collect the best
+% box info in |\box\tw@|.  The structure of the information is as
+% follows: it starts with the current box in split form, first the
+% tail, then the start of the current split box.
+% This is then followed by a zero kern, and then by pairs of boxes and
+% penalties indicating the swept box.
+%    \begin{macrocode}
+  \or
     \global\let\FN@config\FN@bestconfig
     \global\FN@vsize\FN@bestvsize
     \global\let\FN@badness\FN@bestbadness
@@ -2599,27 +2744,8 @@
     \let\FN@slaveid\FN@bestslaveid
     \unvbox\z@
     \setbox\z@\lastbox
-%    \end{macrocode}
-%    \begin{macrocode}
-  \else
-    \xdef\FN@badness{\number\numexpr\FN@badness+\FN@breakpenalty}%
-    \global\advance\FN@vsize-\dimexpr\FN@myvsize
-     *\count\FN@currentinsertion/\@m\relax\relax
-%    \end{macrocode}
-% Now box~0 is the box we need to carry to the next page.  Prepare
-% the box into box~\cmd{\FN@tempbox}.
-%    \begin{macrocode}
-     \global\setbox\FN@tempbox\box\z@
-     \egroup
   \fi
 %    \end{macrocode}
-% Ok, the box to be carried over is now in box~\cmd{\FN@tempbox}, the
-% box to be be left last in this insertion is in box~\cmd{\z@}.  We
-% now have to add color information and other stuff if a split
-% occured.  The color information needs to be added in the inner box,
-% and the corresponding color unwind gets recorded in the outer box.
-% All this is only necessary if we are in inner boxes: there is no
-% information we can usefully add to split parts of the vertical list.
 %    \begin{macrocode}
   \ifnum\FN@currentinsertion=\FN@savebox
   \else
@@ -2665,159 +2791,9 @@
   \fi
 }
 %    \end{macrocode}
-% \end{macro}
-% \begin{macro}{\FN@addmaterial}
-%  Note that \cmd{\gluestretch} is usually negative, so we reduce the
-%  size to which we split for the purpose of getting the minimum
-%  amount of material here.
-%    \begin{macrocode}
-\def\FN@addmaterial{%
-  \setbox\tw@\vsplit\z@ to\dimexpr
-    (\FN@vsize+\gluestretch\FN@vsize)*\@m/\count\FN@currentinsertion
-    -\FN@myvsize-\splitmaxdepth\relax
-  \ifcase\ifvoid\tw@ \@ne\fi
-  \ifnum\badness>\@M \@ne\fi\z@
-    \edef\FN@next{\splitbotmarks\FN@slave}%
-    \ifx\FN@next\@empty
-%    \end{macrocode}
-% \end{macro}
-% The split was successful and yields a new best underfull in our
-% current configuration.
-%    \begin{macrocode}
-      \FN@contribute@tw@
-      \expandafter\expandafter\expandafter
-      \FN@recordbest
-    \else
-%    \end{macrocode}
-% The split would result in a configuration change, so undo it and
-% revert to slow motion
-%    \begin{macrocode}
-      \FN@uncontribute@tw@
-      \expandafter\expandafter\expandafter
-      \FN@slowsplit
-     \fi
-  \else
-%    \end{macrocode}
-% Oops, looks like there is nothing at all that we could contribute
-% without getting overfull.  So the unsplit version is the best we can
-% manage with this configuration.
-%    \begin{macrocode}
-    \FN@uncontribute@tw@
-    \expandafter\FN@recordbest
-  \fi}
 
-\def\FN@slowsplit{\setbox\tw@\vsplit\z@ to\z@
-  \edef\FN@next{\splitbotmarks\FN@slave}%
-  \ifx\FN@next\@empty \FN@contribute@tw@
-    \expandafter\FN@slowsplit
-  \else
-%<trace>    \if\foottrace1%
-%<trace>      \message{Slowsplit in \FN@currentinsertion on \thepage^^J}%
-%<trace>    \fi
-    \FN@uncontribute@tw@
-    \expandafter
-    \FN@recordbest
-  \fi}
 
-\def\FN@recordbest{%
-  \skip@\glueexpr\FN@vsize-\FN@myvsize
-   *\count\FN@currentinsertion/\@m\relax
-  \FN@getbreakpenalty
-  \FN@getbadness\skip@
-  \ifnum\badness>\@M
-    \edef\FN@ebadness{\number\numexpr\maxdimen-\@ne}%
-  \else
-    \ifnum\badness=\@M
-      \edef\FN@ebadness{\number\numexpr\maxdimen-\tw@}%
-    \else
-      \edef\FN@ebadness{\number\numexpr
-        \FN@badness+\FN@breakpenalty+\badness}%
-    \fi
-  \fi
-  \dimen@\glueexpr\FN@bestvsize\relax
-%    \end{macrocode}
-% If the current break is satisfactory, we can just return it.
-%    \begin{macrocode}
-  \ifcase
-    \ifnum\FN@ebadness>\bigfoottolerance
-      \else \@ne\fi
-    \ifnum\FN@breakpenalty>-\@M
-      \else \@ne\fi
-%    \end{macrocode}
-% If no change of configuration follows later, we can return the best
-% up to now.
-%    \begin{macrocode}
-    \ifnum\numexpr\FN@slaveid+\@ne<\numexpr\FN@masterid\relax
-      \else \@ne\fi
-    \ifvoid\z@ \@ne\fi \z@
-%    \end{macrocode}
-% Ok, so the split was not as good as to cause us to return
-% immediately, and it also was not the last opportunity for a split
-% (which again would make us return immediately).
-% So we check if it is at least better than the last one, in which
-% case we need to replace the previous best.
-%    \begin{macrocode}
-    \ifcase
-      \ifnum\FN@bestebadness>\FN@ebadness \@ne\fi
-      \ifnum\FN@bestebadness<\FN@ebadness \tw@\fi
-      \ifdim\skip@<\z@
-        \ifdim\dimen@<\skip@ \@ne \else \tw@\fi
-      \fi
-      \ifdim\dimen@>\skip@ \@ne\fi \tw@
-    \or
-      \xdef\FN@tempinfo{\def\noexpand\FN@bestvsize{\the\skip@}%
-        \def\noexpand\FN@bestebadness{\FN@ebadness}%
-        \def\noexpand\FN@bestbadness{\number\numexpr\FN@badness+%
-          \FN@breakpenalty}%
-        \def\noexpand\FN@bestconfig{\FN@config}%
-        \def\noexpand\FN@bestslaveid{\FN@slaveid}%
-        \def\noexpand\FN@bestsplitcolors{\FN@splitcolors}%
-        \FN@myvsize=\the\FN@myvsize\relax}%
-      \global\setbox\FN@tempbox\box\z@
-      \egroup
-      \FN@tempinfo
-      \let\FN@splitcolors\FN@bestsplitcolors
-      \let\FN@slaveid\FN@bestslaveid
-%    \end{macrocode}
-% Now all relevant info has been retrieved, and we collect the best
-% box info in |\box\tw@|.  The structure of the information is as
-% follows: it starts with the current box in split form, first the
-% tail, then the start of the current split box.
-% This is then followed by a zero kern, and then by pairs of boxes and
-% penalties indicating the swept box.
-%    \begin{macrocode}
-      \setbox\tw@\vbox{%
-%    \end{macrocode}
-% We don't need to place master/slave marks here: the necessary
-% information is available outside in the \cmd{\FN@masterslot} and
-% \cmd{\FN@slaveid} info and gets attached afterwards.
-%    \begin{macrocode}
-        \copy\z@\break\nointerlineskip
-        \copy\FN@tempbox\penalty\FN@tempbox
-        \let\@elt\FN@cachesize
-        \global\advance\FN@vsize\glueexpr\z@skip\FN@currentrecursion\relax
-        \let\@elt\FN@sweepcachebox
-        \FN@currentrecursion
-        \xdef\FN@tempinfo{\FN@myvsize=\the\FN@myvsize\relax}}%
-      \FN@tempinfo
-      \setbox\z@
-      \vbox\bgroup
-        \unvbox\z@
-        \setbox\z@\box\FN@tempbox
-    \fi
-    \loop
-      \setbox\tw@\vsplit\z@ to\z@
-      \edef\FN@next{\splitbotmarks\FN@slave}%
-      \FN@contribute@tw@
-      \ifcase
-        \ifvoid\z@\@ne\fi
-        \ifx\FN@next\@empty\else\@ne\fi\z@
-    \repeat
-    \expandafter\FN@splitfurther
-  \or
-    \expandafter\FN@returnbest
-  \fi}
-%    \end{macrocode}
+
 % \begin{macro}{\FN@contribute@tw@}
 %   This will go from the state where we have the previous
 %   \cmd{\splitdiscards} struttified on the current list some material
@@ -2837,7 +2813,7 @@
 %    \begin{macrocode}
   \setbox4\lastbox
   \ifvoid4 \setbox4\vbox{\splitdiscards}%
-     \setbox\tw@\vbox{\unvbox\tw@\boxmaxdepth\splitmaxdepth}%
+    \setbox\tw@\vbox{\unvbox\tw@\boxmaxdepth\splitmaxdepth}%
   \else
 %    \end{macrocode}
 % Now the last box is a strut.  We remove its outer dimensions from
@@ -2924,6 +2900,8 @@
       \FN@assembleboxes\global\setbox\count@\box\z@\egroup
       \nointerlineskip\box\count@\egroup
 %    \end{macrocode}
+% Note that now all footnote boxes are collected into a single vbox,
+% followed by the last footnote box as another vbox.
 % Now we just need to reduce the available size on the page by the
 % height of the assembled material:
 %    \begin{macrocode}
@@ -2932,6 +2910,39 @@
   \fi\fi}
 %    \end{macrocode}
 % \end{macro}
+% \begin{macro}{\FN@rejoin}
+%   This glues together cache boxes that have been split, without
+%   regenerating them.  This saves a lot of time as compared to
+%   \cmd{\FN@reconfig}.
+%    \begin{macrocode}
+\def\FN@rejoin#1#2{{%
+  \count@\FN@cache#2%
+  \ifvoid\count@\else
+    \global\advance\FN@vsize\dimexpr
+       (\ht\count@+\dp\count@)*\count#2/\@m\relax
+    \global\setbox\count@\vbox{%
+      \unvbox\count@
+      \ifnum\lastpenalty>\z@
+        \unpenalty
+        \setbox\tw@\lastbox
+        \setbox\z@\lastbox
+        \dimen@\dp\z@
+        \setbox\z@\vbox{%
+          \unvbox\z@
+          \setbox\z@\lastbox
+          \unvbox\z@
+          \unvbox\tw@}%
+        \ht\z@=\dimexpr\ht\z@+\dp\z@-\dimen@\relax
+        \dp\z@=\dimen@
+        \nointerlineskip
+        \box\z@
+      \fi}%
+    \global\advance\FN@vsize-\dimexpr
+        (\ht\count@+\dp\count@)*\count#2/\@m\relax
+  \fi}}
+%    \end{macrocode}
+% \end{macro}
+% 
 % \begin{macro}{\FN@retainkept}
 %  This relies on \cmd{\@elt} being set to \cmd{\FN@removecheck} which
 %  expands to \cmd{\@ne} if |\box0| is strictly between the two values
