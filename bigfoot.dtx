@@ -99,8 +99,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/03/05 16:20:43 $
-  \FN@next $Revision: 1.20 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/03/06 17:31:49 $
+  \FN@next $Revision: 1.21 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -2980,10 +2980,18 @@
 \let\output\FN@output
 %    \end{macrocode}
 % If the footnote type ``default'' has not been declared by the time
-% the document starts, we do so
+% the document starts, we do so at the start of the document.
+% Unfortunately, by this time the initialization code in |manyfoot|'s
+% own \cmd{\AtBeginDocument} hook has already run, so we manually run
+% the initialization hook just for the command we inserted ourselves.
 %    \begin{macrocode}
+\def\FN@maybestart#1#2#3{\ifx#3\relax
+  \csname MFL@start#1\endcsname{#2}\fi#3}
+\@onlypreamble\FN@maybestart
 \AtBeginDocument{\@ifundefined{footinsdefault}%
-  {\DeclareNewFootnote[plain]{default}}{}%
+  {\DeclareNewFootnote[plain]{default}%
+    {\let\@elt\FN@maybestart
+      \MFL@list\relax}}{}%
   \let\c@footnote\c@footnotedefault
   \let\thefootnote\thefootnotedefault
   \def\thefootnotedefault{\thefootnote}%

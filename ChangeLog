@@ -1,3 +1,8 @@
+2006-03-06  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Fix the default footnote definition/AtBeginDocument
+	stuff.
+
 2006-03-05  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Cater for useful slave id at start of document.
