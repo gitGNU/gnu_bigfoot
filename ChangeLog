@@ -1,3 +1,7 @@
+2006-03-25  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Make self-compile, and compile again.
+
 2006-03-06  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Fix the default footnote definition/AtBeginDocument

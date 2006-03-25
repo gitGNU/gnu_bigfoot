@@ -1,3 +1,5 @@
+\iffalse
+% \fi
 % \GetFileInfo{bigfoot.sty}
 % \title{The \texttt{bigfoot} package\\version \fileversion}
 % \date{\filedate}
@@ -59,36 +61,40 @@
 % \end{itemize}
 % As an example of how simple the usage can be, here is the
 % documentation driver for this document:
+% \iftrue
+\fi
 %    \begin{macrocode}
-%<driver> \documentclass{ltxdoc}
-%<driver> \usepackage{bigfoot}
-%<driver> \usepackage{tabularx}
-%<driver> \usepackage{hyperref}
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage{bigfoot}
+\usepackage{tabularx}
+\usepackage{hyperref}
 %    \end{macrocode}
 % After loading the packages, we declare two footnote blocks.  One is
 % the default footnote block, another block is called |subblock| and
 % is numbered with letters.  The letters start new on each page.  Both
 % footnote blocks default to in-paragraph footnotes.
 %    \begin{macrocode}
-%<driver> \DeclareNewFootnote[para]{default}
-%<driver> \DeclareNewFootnote[para]{B}[alph]
-%<driver> \MakeSortedPerPage{footnoteB}
+\DeclareNewFootnote[para]{default}
+\DeclareNewFootnote[para]{B}[alph]
+\MakeSortedPerPage{footnoteB}
 %    \end{macrocode}
 % In addition, we add an alternate footnote sequence that can be
 % interspersed with the normal footnotes by use of the
 % \cmd{\footnote'} command which we effectively define here.
 %    \begin{macrocode}
-%<driver> \newcounter{footalt}
-%<driver> \def\thefootalt{\fnsymbol{footalt}}
-%<driver> \MakeSortedPerPage[2]{footalt}
-%<driver> \WithSuffix\def\footnotedefault'{\refstepcounter{footalt}%
-%<driver>   \Footnotedefault{\thefootalt}}
+\newcounter{footalt}
+\def\thefootalt{\fnsymbol{footalt}}
+\MakeSortedPerPage[2]{footalt}
+\WithSuffix\def\footnotedefault'{\refstepcounter{footalt}%
+  \Footnotedefault{\thefootalt}}
 %    \end{macrocode}
 % Actually, that already was all.  We can now start the document.
 %    \begin{macrocode}
-%<driver> \begin{document}
-%<driver> \DocInput{bigfoot.dtx}
-%<driver> \end{document}
+\begin{document}
+\DocInput{bigfoot.dtx}
+\end{document}
+%</driver>
 %    \end{macrocode}
 % \StopEventually{}
 % \section{The implementation}
@@ -99,8 +105,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/03/06 17:31:49 $
-  \FN@next $Revision: 1.21 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/03/25 21:29:02 $
+  \FN@next $Revision: 1.22 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -1745,7 +1751,9 @@
 %    \begin{macrocode}
   \edef\FN@outputpenalty{\number\outputpenalty}%
   \ifvoid\FN@savebox
-    \FN@sweeptopmarks
+    \ifvoid\@holdpg
+      \FN@sweeptopmarks
+    \fi
     \ifvoid\@cclv
       \global\FN@outervsize\z@
     \else
@@ -2060,7 +2068,8 @@
     \or
 %<trace> \if\foottrace8%
 %<trace>   \message{^^JOutput: config is \FN@config...}\fi
-    \setbox\tw@\vbox{\the\FN@output
+    \setbox\tw@\vbox{%
+      \the\FN@output
 %<trace> \if\foottrace8%
 %<trace>   \ifnum\lastnodetype=\m@ne
 %<trace>     \message{^^JOutput: end without carryover^^J}%
@@ -2225,7 +2234,7 @@
 
 % The following routine will analyze the last box where the results
 % from \cmd{\splitdiscards} are stored and return the penalty
-% associated with the breakpoint in the global macro
+% associated with the breakpoint in the macro
 % \cmd{\FN@breakpenalty}.
 % \begin{macro}{\FN@getbreakpenalty}
 %    \begin{macrocode}
@@ -2791,9 +2800,8 @@
   \fi
 }
 %    \end{macrocode}
-
-
-
+% \end{macro}
+% 
 % \begin{macro}{\FN@contribute@tw@}
 %   This will go from the state where we have the previous
 %   \cmd{\splitdiscards} struttified on the current list some material
