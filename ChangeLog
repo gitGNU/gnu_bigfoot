@@ -1,3 +1,7 @@
+2006-04-13  David Kastrup  <dak@gnu.org>
+
+	* perpage.sty: Add some more doc, and `\theperpage' provision.
+
 2006-03-25  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Make self-compile, and compile again.

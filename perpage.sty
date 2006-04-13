@@ -1,18 +1,23 @@
-% $Id: perpage.sty,v 1.9 2005/11/04 00:18:37 dak Exp $
-% Copyright 2002, 2003, 2004, 2005 David Kastrup <dak@gnu.org>
+% $Id: perpage.sty,v 1.10 2006/04/13 09:08:05 dak Exp $
+% Copyright 2002, 03, 04, 05, 06  David Kastrup  <dak@gnu.org>
 % Licence: GPL version 2 or later
 %
 % The \texttt{perpage} package adds the ability to reset counters per
-% page, and/or to keep their occurences sorted in order of appeareance
-% on the page.  It also keeps uniquely ascending ids associated with
-% each counters that are used for keeping footnotes ordered in
-% \file{bigfoot.sty}.
+% page and/or keep their occurences sorted in order of appeareance on
+% the page.
+%
+% It works by attaching itself to the code for \cmd{\stepcounter} and
+% will then modify the given counter according to information written
+% to the |.aux| file, which means that multiple passes may be needed.
+% Since it uses the internals of the \cmd{\label} mechanism, the need
+% for additional passes will get announced by \LaTeX\ as ``labels may
+% have changed''.
 %
 % \DescribeMacro{\MakePerPage}
 % \begin{quote}
 %   |\MakePerPage[2]{footnote}|
 % \end{quote}
-% will start footnote numbers with 2 on each page (the optional
+% will start footnote numbers with~2 on each page (the optional
 % argument defaults to~1).  2~might be a strange number, unless you
 % have used something like
 % \begin{quote}
@@ -25,6 +30,76 @@
 % not reset per page and things like |\fnsymbol| will quickly exhaust
 % the valid ranges.
 %
+% \DescribeMacro{\MakeSorted}
+% \begin{quote}
+%   |\MakeSorted{figure}|
+% \end{quote}
+% will make the |figure| counter get `sorted': this means that counter
+% values will be assigned in order of appearance in the output, not in
+% order of appearance in the source code.  For example, the order of
+% interspersed one- and two-column figures might get mixed up by
+% \LaTeX\ in the output.  Making the counter sorted will fix the order
+% to match the order of appearance.  A similar problem is when
+% ordinary footnotes are present in floating material (this does not
+% work in standard \LaTeX, but might do so when using |manyfoot.sty|
+% or |bigfoot.sty|): this might jumble their order in the output, and
+% making their counter sorted will make things appear fine again.
+%
+% While this would not fix the order in the table of figures,
+% fortunately the respective entries actually get written out in order
+% of appearance in the output anyway, so this indeed fixes the
+% problem.
+%
+% Manually setting the counter does not lead to reliable results in
+% general; as a special case, however, resetting it to zero is
+% recognized.  The point where it is reset in the source code
+% separates `count groups': everything in the source before that point
+% is assigned sorted numbers separately from everything appearing
+% behind it, and the sequence numbers start again with~1 with the
+% first item appearing in the output (not the source) from the new
+% count group.
+%
+% \DescribeMacro{\MakeSortedPerPage}
+% \begin{quote}
+%   |\MakeSortedPerPage[2]{table}|
+% \end{quote}
+% will make the table numbers restart at 2 on each page \emph{and}
+% will keep them sorted, to boot.  You can start a new count group by
+% setting the counter to~0 (not~1!) manually, if you really must.  You
+% will usually want to use something like
+% \begin{quote}
+%   |\renewcommand{\thefigure}{\thepage-\arabic{figure}}
+% \end{quote}
+% to go along with a page-wise figure number.  Note that it would be
+% quite silly to start the ranges with~2: this is just an example for
+% the optional argument in case that you ever need it.
+%
+% \DescribeMacro{\AddAbsoluteCounter}
+% \begin{quote}
+%   |\AddAbsoluteCounter{equation}|
+% \end{quote}
+% will create a counter |absequation| that will advance together with
+% the counter |equation| but will not get reset along with it.  This
+% is not sorted into output order, but just runs along with the
+% sequence in the source file.  As a special case, the counter
+% |abspage| is created in this manner and \cmd{\theabspage} is defined
+% as an arabic number that works in the same contexts as \cmd{\page}
+% (namely, gets properly deferred by \cmd{\protected@write}).
+%
+% \DescribeMacro{\theperpage}
+% If you want to label things also on a per page base, for example
+% with
+% \begin{quote}
+%   |\renewcommand{\thefigure}{\thepage-\arabic{figure}}|
+% \end{quote}
+% you'll have the problem that \thepage is updated asynchronously with
+% the real page, since \TeX\ does not know which page the figure will
+% end up.  If you have used the |perpage| package for modifying the
+% figure counter, however, at the point where the counter is
+% incremented, the macro \cmd{\theperpage} will be set to the correct
+% value corresponding to the actual page breaks.  Note that this macro
+% is shared between all counters, so advancing a different counter
+% under control of |perpage| will render \cmd{\thefigure} incorrect.
 % \StopEventually{}
 %
 % It works in the following manner: The basic work is done through
@@ -84,8 +159,8 @@
 
 \NeedsTeXFormat{LaTeX2e}
 \def\next$#1: #2 #3${#2}
-\ProvidesPackage{perpage}[\next$Date: 2005/11/04 00:18:37 $
-  v\next$Revision: 1.9 $ Reset/sort counters per page]
+\ProvidesPackage{perpage}[\next$Date: 2006/04/13 09:08:05 $
+  v\next$Revision: 1.10 $ Reset/sort counters per page]
 
 \newcommand\AddAbsoluteCounter[1]
 {\@ifundefined{c@abs#1}{%
@@ -162,17 +237,21 @@
 
 \def\pp@fetchctr#1{\expandafter\expandafter\expandafter\pp@fetchctrii
   \csname pp@r@#1@\number\value{pp@a@#1}\endcsname
-  \@empty}
+  \@empty\@empty}
 
-\def\pp@fetchctrii#1#2{\edef\pp@label{#1}%
-  \edef\pp@page{#2}}
+\global\let\theperpage\@empty
 
-\def\pp@pagectr#1#2#3{\@ifundefined{c@pp@a@#1}{}{%
+\def\pp@fetchctrii#1#2#3{\edef\pp@label{#1}%
+  \edef\pp@page{#2}%
+  \gdef\theperpage{#3}}
+
+\def\pp@pagectr#1#2#3#4{\@ifundefined{c@pp@a@#1}{}{%
     \addtocounter{pp@a@#1}\@ne
     \edef\next{\noexpand
-      \@newl@bel{pp@r@#1}{#2}{{\number\value{pp@a@#1}}{#3}}}\next}}
+      \@newl@bel{pp@r@#1}{#2}{{\number\value{pp@a@#1}}{#3}%
+        {#4}}}\next}}
 
-\def\pp@ppagectr#1#2#3{\@ifundefined{c@pp@a@#1}{}{%
+\def\pp@ppagectr#1#2#3#4{\@ifundefined{c@pp@a@#1}{}{%
     \def\next{#3}%
     \expandafter\ifx\csname pp@page@#1\endcsname\next
       \addtocounter{pp@a@#1}\@ne
@@ -181,18 +260,20 @@
     \fi
     \global\expandafter\let\csname pp@page@#1\endcsname\next
     \edef\next{\noexpand
-      \@newl@bel{pp@r@#1}{#2}{{\number\value{pp@a@#1}}{#3}}}\next}}
+      \@newl@bel{pp@r@#1}{#2}{{\number\value{pp@a@#1}}{#3}%
+        {#4}}}\next}}
 
-\def\pp@spagectr#1#2#3{\@ifundefined{c@pp@a@#1}{}{%
+\def\pp@spagectr#1#2#3#4{\@ifundefined{c@pp@a@#1}{}{%
     \count@0\csname pp@g@#1@#3\endcsname
     \advance\count@\@ne
     \expandafter\xdef\csname pp@g@#1@#3\endcsname{\number\count@}%
     \edef\next{\noexpand
-      \@newl@bel{pp@r@#1}{#2}{{\number\count@}{#3}}}\next}}
+      \@newl@bel{pp@r@#1}{#2}{{\number\count@}{#3}%
+        {#4}}}\next}}
 
 
 \def\pp@writectr#1#2#3{\edef\next{%
-    \string#1{#2}{\number\value{pp@a@#2}}{#3}}%
+    \string#1{#2}{\number\value{pp@a@#2}}{#3}{\noexpand\thepage}}%
   \pchk@vlist
   \dimen@=\lastkern
   \ifdim\dimen@=\z@ \else \unkern\fi
