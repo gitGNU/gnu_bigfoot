@@ -37,8 +37,12 @@
 % \item The order of footnotes in an apparatus is `natural': it starts
 %   with any footnote that may have been broken from the next page,
 %   followed by footnotes from the current page in the order of the
-%   appearance of their footnote marks.\footnoteB{This footnote
-%     appears above notes on notes.}
+%   appearance of their footnote
+%   marks.\footnoteB{This footnote appears above notes on notes.}
+%   Where the order of appearance in the document differs from the
+%   order in the source code, you will usually want to use the
+%   \cmd{\MakeSorted} command from the |perpage| package to get the
+%   numbering fixed appropriately.
 % \item Footnotes can be formatted in separate paragraphs, or be run
 %   into a single paragraph.  The choice is made per footnote
 %   apparatus, but can be overridden for single
@@ -57,7 +61,8 @@
 %       wrote \verb/\verb+|\verb|-like+/ in the footnote then.}}
 % \item You can use color in footnotes.  If a footnote gets broken
 %   across pages, the color at the point of the break will get resumed
-%   on the next page.
+%   on the next page.  Actually, the whole color stack will get
+%   reinstated.
 % \end{itemize}
 % As an example of how simple the usage can be, here is the
 % documentation driver for this document:
@@ -71,8 +76,8 @@
 \usepackage{hyperref}
 %    \end{macrocode}
 % After loading the packages, we declare two footnote blocks.  One is
-% the default footnote block, another block is called |subblock| and
-% is numbered with letters.  The letters start new on each page.  Both
+% the default footnote block, another block is called~|B| and is
+% numbered with letters.  The letters start new on each page.  Both
 % footnote blocks default to in-paragraph footnotes.
 %    \begin{macrocode}
 \DeclareNewFootnote[para]{default}
@@ -89,13 +94,27 @@
 \WithSuffix\def\footnotedefault'{\refstepcounter{footalt}%
   \Footnotedefault{\thefootalt}}
 %    \end{macrocode}
-% Actually, that already was all.  We can now start the document.
+% Actually, that already was all.  We can now start the document.  The
+% following makes sure that we get the full documentation only by
+% compiling the driver file:
 %    \begin{macrocode}
 \begin{document}
+\OnlyDescription
+%<driver> \AlsoImplementation
 \DocInput{bigfoot.dtx}
 \end{document}
 %</driver>
 %    \end{macrocode}
+% In order to be useful without additional hassle, the normal footnote
+% level will be called |default|.  If no such style has been defined
+% at the start of the document, it will get defined and used for
+% ordinary footnotes, fixing quite a few problems of \LaTeX's own
+% footnote placement algorithms.
+%
+% Apart from that, usage is very much like that of |manyfoot|, so for
+% the customization possibilities of |bigfoot| with regards to
+% multiple footnote blocks and rules between them, refer to
+% |manyfoot|'s documentation.
 % \StopEventually{}
 % \section{The implementation}
 % \subsection{Startup code}
@@ -105,8 +124,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/03/25 21:29:02 $
-  \FN@next $Revision: 1.22 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/05/08 08:55:53 $
+  \FN@next $Revision: 1.23 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -1494,7 +1513,7 @@
 % a split present.
 %    \begin{macrocode}
 \newtoks\FN@output
-\FN@output\expandafter{\the\output}
+\FN@output\output
 
 \newbox\FN@tempbox
 \newinsert\FN@savebox
@@ -1644,6 +1663,18 @@
     \repeat}}
 %    \end{macrocode}
 % \end{macro}
+% \paragraph{Some stuff}
+%
+% \begin{macro}{\FootnoteMainMinimum}
+%   This specifies the minimum amount of main text.  You can make this
+%   a complicated expression if you want to, for example by checking
+%   the presence of particular footnotes.
+%    \begin{macrocode}
+\def\FootnoteMainMinimum{0pt}
+%    \end{macrocode}
+% \end{macro}
+%
+%\paragraph{The output routine itself}
 %
 % This is our own output routine that does all the balancing stuff.
 % If we receive a forced penalty here, we must not do any of our
@@ -1686,7 +1717,7 @@
 % own.  If the regular output routine failed to ship out the prepared
 % insertions, we just keep the original data either in their boxes or
 % in a reinserted insertion.
-
+%
 % It hides the relevant information from the `real' output routine
 % until such a time that we have enough material gathered to produce a
 % full page.  The exception to this is when we have a special penalty
@@ -1734,8 +1765,15 @@
 % anyway.
 %    \begin{macrocode}
 \output{%
+%<trace> \if\foottrace8%
+%<trace>   \message{entering output with
+%<trace>      \outputpenalty=\the\outputpenalty:}%
+%<trace>   \showbox\@cclv\fi
 % \ifnum\c@page=10 \traceon\fi
   \ifnum\outputpenalty=-13750
+%<trace>  \if\foottrace8%
+%<trace>    \message{Discarding box 255.}%
+%<trace>  \fi
     \ifnum\insertpenalties>\z@
       \PackageError{bigfoot}{Too much insertion material}{%
         This error means that the output routine was not able to^^J%
@@ -1812,7 +1850,10 @@
       \ifnum\FN@outputpenalty=-13751 \@ne\fi \tw@
     \or
       \FN@vsadjustlist
-%<trace> \if\foottrace8\message{receiving special penalty}\fi
+%<trace> \if\foottrace8\message{receiving special penalty
+%<trace>    \FN@outputpenalty, dissing box 255:}%
+%<trace>      {\showboxdepth4 \showboxbreadth400
+%<trace>       \tracingonline=\@ne\showbox\@cclv}\fi
 %    \end{macrocode}
 % We don't need to insert either discards or outputpenalties anywhere:
 % those are exclusively derived from our own inserted code.
@@ -1890,17 +1931,14 @@
       \fi
    \fi
   \fi
-  \fi
-%    \end{macrocode}
-% Now we have recovered a sensible state and glued everything together
-% that has been necessary.  All insertion parameters are at their
-% standard values, and any insertions have been collected in the
-% respective boxes.  If the whole exercise has been 
-%    \begin{macrocode}
-}
+  \fi}
 %    \end{macrocode}
 % \begin{macro}{\FN@normaloutput}
 %   This is the normal output routine we use.
+%   Now we have recovered a sensible state and glued everything together
+%   that has been necessary.  All insertion parameters are at their
+%   standard values, and any insertions have been collected in the
+%   respective boxes.  If the whole exercise has been 
 %    \begin{macrocode}
 \def\FN@normaloutput{%
 %    \end{macrocode}
@@ -1935,23 +1973,27 @@
 % If we have floating insertions, we need to catch up with them.  This
 % is done in case~1 which just places an immediate penalty and
 % recurses.
+%
+% Now here are a few cases that are only checked when we don't have a
+% special penalty:
 %    \begin{macrocode}
-    \ifdim\FN@vsize<\glueshrink\FN@vsize \thr@@ \fi
+    \ifnum\outputpenalty>-\@M
+%    \end{macrocode}
+% The first case is if the page is underfull.  We need more material then.
+%    \begin{macrocode}
+      \ifdim\FN@vsize>-\gluestretch\FN@vsize \tw@ \fi
+%    \end{macrocode}
+% Second case is when there is not enough vertical minimum material.
+%    \begin{macrocode}
+      \ifdim\FootnoteMainMinimum>\ht\@cclv \tw@ \fi
+    \fi
 %    \end{macrocode}
 % Case 3 means page is overfull.  If there are no missing insertions,
 % try to split.
 %    \begin{macrocode}
-    \ifdim\FN@vsize>-\gluestretch\FN@vsize
-%      \ifdim\dimexpr\FN@vsize-\normalbaselineskip<\glueshrink\FN@vsize
-%      \else
+    \ifdim\FN@vsize<\glueshrink\FN@vsize \thr@@ \fi
 %    \end{macrocode}
-% page is underfull, and the free space is at least that of a single
-% line.  If we have no special output penalty, gather more material
-%    \begin{macrocode}
-        \ifnum\outputpenalty>-\@M \tw@\fi
-%      \fi
-    \fi
-%    \end{macrocode}
+% 
 % page has appropriate size or we have special penalty.  If we have
 % come here not the first time, we might have arrived at a non-optimal
 % break.  So we attempt a split.
@@ -1962,15 +2004,11 @@
         \global\setbox\@cclv\vbox
           spread\FN@vsize{\unvbox\@cclv\boxmaxdepth\maxdepth}}%
     \fi
-%<trace> \if\foottrace8
-%<trace> \message{Calling regular output with }
-%<trace> \message{\outputpenalty=\number\outputpenalty}
-%<trace> \fi
     \the\FN@output
     \FN@nest@iterate\FN@clearcache
   \or
 %    \end{macrocode}
-% We just pull in remaining insertions and are done.
+% Case 1: We just pull in remaining insertions and are done.
 %    \begin{macrocode}
     \FN@restartoutput
     \penalty -13749
@@ -1998,6 +2036,8 @@
       \box\@cclv}%
     \xdef\FN@config{\noexpand\@elt{\number0\botmarks\FN@slave}%
       {\number\maxdimen}}%
+%<trace> \ifvoid\FN@savebox \else \PackageError{bigfoot}{\FN@savebox
+%<trace>   \space should be void!}{}\fi
     \global\setbox\FN@savebox\vbox{}%
     \gdef\FN@badness{0}%
     \edef\FN@defaultpenalty{\ifnum\outputpenalty<\@M
@@ -2032,10 +2072,15 @@
         \boxmaxdepth\maxdepth\egroup
       \fi
     \vbadness\count@
+%    \end{macrocode}
+% Ok, setting \cmd{\outputpenalty} like this is actually incorrect.
+% It should really be set from the unboxed material from box~0 above.
+%    \begin{macrocode}
     \setbox\z@
       \ifvoid\FN@tempbox \box\FN@tempbox \else
         \ifnum\outputpenalty<\@M
           \vbox{\unvbox\FN@tempbox\penalty\outputpenalty}%
+          \global\outputpenalty=\@M
         \else \box\FN@tempbox
         \fi
       \fi
@@ -2117,6 +2162,8 @@
 %    \end{macrocode}
 %   Now we collect all boxes in the save box.
 %    \begin{macrocode}
+%<trace> \ifvoid\FN@savebox \else \PackageError{bigfoot}{\FN@savebox
+%<trace>   \space should be void in \string\FN@prepareoutput}{}\fi
   \global\setbox\FN@savebox\vbox{%
     \box\@cclv
     \FN@list@iterate\FN@sweepbox}}
@@ -2485,18 +2532,41 @@
           \unvbox\tw@\boxmaxdepth\splitmaxdepth}%
 %    \end{macrocode}
 % Ok, now rinse and repeat if we don't have reached the last footnote
-% in the block.
+% in the block.  Or, if we are in the main block and have not reached
+% the necessary minimum size.
 %    \begin{macrocode}
-        \ifnum\FN@currentinsertion=\FN@savebox \else
+        \ifnum\FN@currentinsertion=\FN@savebox
+          \edef\FN@slaveid{\splitbotmarks\FN@slave}%
+          \FN@contribute@tw@
+          \ifdim\FootnoteMainMinimum>\FN@myvsize
+            \loop
+              \setbox\tw@\vsplit\z@ to\z@
+              \edef\FN@slaveid{\splitbotmarks\FN@slave}%
+              \FN@contribute@tw@
+            \ifcase\ifdim\FootnoteMainMinimum>\FN@myvsize
+              \ifvoid\z@
+                \@ne
+              \else
+                \tw@
+              \fi\fi \z@
+            \or
+              \PackageWarning{bigfoot}{too little main material}%
+            \else
+            \repeat
+          \fi
+        \else
           \ifnum0\splitbotmarks\FN@master=\FN@masterslot \else
-          \loop
-            \FN@contribute@tw@
-            \let\FN@splitcolors\@empty
-            \setbox\tw@\vsplit\z@ to\z@
-           \ifnum0\splitbotmarks\FN@master=\FN@masterslot
-           \else
-          \repeat
-        \fi\fi
+            \loop
+              \FN@contribute@tw@
+              \setbox\tw@\vsplit\z@ to\z@
+            \ifnum0\splitbotmarks\FN@master=\FN@masterslot
+            \else
+            \repeat
+          \fi
+          \let\FN@splitcolors\@empty
+          \edef\FN@slaveid{\splitbotmarks\FN@slave}%
+          \FN@contribute@tw@
+        \fi
 %    \end{macrocode}
 % All of the above was necessary to ensure that we actually have the
 % beginning of the relevant footnote in our material.  From now on,
@@ -2504,13 +2574,11 @@
 % Ok, now we have to check whether the subordinate configuration has
 % changed.
 %    \begin{macrocode}
-        \edef\FN@slaveid{\splitbotmarks\FN@slave}%
         \ifx\FN@slaveid\@empty
 %<trace>  \ifnum\FN@currentinsertion=\FN@savebox\else
 %<trace>    \errmessage{Missing slaveid in \FN@currentinsertion}\fi
           \edef\FN@slaveid{\number0\topmarks\FN@slave}%
         \fi
-        \FN@contribute@tw@
         \ifnum\numexpr\FN@slaveid+\@ne<\FN@masterid
           \let\FN@next\FN@slaveid
         \else
@@ -2987,6 +3055,23 @@
 %    \begin{macrocode}
 \let\output\FN@output
 %    \end{macrocode}
+% Ok, here is debugging code intercepting all calls of the regular
+% output routine and reporting its entry and exit states.
+%<trace> \newtoks\FN@tr@output
+%<trace> \FN@tr@output\output
+%<trace> \output{\if\foottrace8{%
+%<trace>   \setbox\z@\vbox{%
+%<trace>     \message{Calling regular output with
+%<trace>       \outputpenalty=\the\outputpenalty, box255 as}%
+%<trace>     \showbox\@cclv
+%<trace>     \the\FN@tr@output
+%<trace>     \message{Returning from regular output with
+%<trace>     \ifnum\lastnodetype<\z@
+%<trace>       empty vertical list.\else vlist:}}%
+%<trace>   \showbox\z@
+%<trace>   \unvbox\z@{{\fi}}}\else\the\FN@tr@output\fi}
+%<trace> \let\output\FN@tr@output
+%    \end{macrocode}
 % If the footnote type ``default'' has not been declared by the time
 % the document starts, we do so at the start of the document.
 % Unfortunately, by this time the initialization code in |manyfoot|'s
@@ -3036,5 +3121,5 @@
 % \endinput
 % Local Variables:
 % mode: doctex
-% TeX-master: "bigfoot.drv"
+% TeX-master: t
 % End:

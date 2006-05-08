@@ -1,3 +1,11 @@
+2006-05-08  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Some comment changes.  Make a difference between
+	compiling the file directly and the driver file.  Add
+	`\FootnoteMainMinimum'.  Add more tracing.  Fix double output
+	routine calls with special penalties resulting in lost page
+	material.
+
 2006-04-13  David Kastrup  <dak@gnu.org>
 
 	* perpage.sty: Add some more doc, and `\theperpage' provision.
