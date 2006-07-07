@@ -124,8 +124,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/05/08 08:55:53 $
-  \FN@next $Revision: 1.23 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/07/07 10:25:26 $
+  \FN@next $Revision: 1.24 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -167,19 +167,23 @@
 % \end{tabular}
 %    \begin{macrocode}
 %<trace>\DeclareOption{trace}{%
-%<trace>\DeclareOption*{\ftflags=\CurrentOption\relax}%
+%<trace>\DeclareOption*{\ftflags=\CurrentOption\relax
+%<trace>  \DeclareOption*{\OptionNotUsed}}%
 %<trace>  \AtEndOfPackage{\RequirePackage{trace}\relax
 %<trace>  \errorcontextlines\maxdimen
 %<trace>  \showboxdepth4
 %<trace>  \showboxbreadth100
 %<trace>  \tracingonline=\@ne}%
 %<trace>}
+%<trace>\def\FN@tracepage{\c@page}
+%<trace>\DeclareOption{tracepage}{%
+%<trace>  \DeclareOption*{\edef\FN@tracepage{\CurrentOption}%
+%<trace>    \DeclareOption*{\OptionNotUsed}}}
 %<trace>\newcount\ftflags
 %<trace>\def\foottrace#1{\ifnum\numexpr(\ftflags+(#1))/(2*#1)*(2*#1)%
 %<trace>  =\numexpr(\ftflags+3*#1/2)/#1*#1\relax
-%<trace>  0\else1\fi1}
-
-\ProcessOptions \relax
+%<trace>  f\else t\fi\ifnum\FN@tracepage=\c@page t\else n\fi}
+\ProcessOptions*
 %    \end{macrocode}
 % |hyperref|'s footnote support will just cause trouble.  So if
 % |hyperref| was already loaded or is going to be loaded, we turn off
@@ -2061,29 +2065,35 @@
       \fi
       \setbox\z@\lastbox
       \ifvoid\z@
+        \ifvbox\FN@tempbox
+          \ifnum\outputpenalty<\@M
+            \global\setbox\FN@tempbox{\unvbox\FN@tempbox
+              \penalty\outputpenalty}%
+          \fi
+          \global\outputpenalty=\@M
+        \fi
         \egroup \global\setbox\@cclv\box\voidb@x
       \else
         \MFL@removevboxes
         \unvbox\z@
+        \let\FN@defaultpenalty\@M
+        \FN@getbreakpenalty
         \setbox\z@\lastbox
-        \ifvoid\z@ \else
-          \global\setbox\FN@tempbox\vbox{\unvbox\z@\unvbox\FN@tempbox}%
+        \ifcase
+          \ifvbox\FN@tempbox \@ne\fi
+          \ifvoid\z@ \else \@ne\fi \z@
+        \or
+          \global\setbox\FN@tempbox\vbox{\unvbox\z@
+            \unvbox\FN@tempbox
+            \ifnum\outputpenalty<\@M
+              \penalty\outputpenalty
+            \fi}%
+          \global\outputpenalty\FN@breakpenalty
         \fi
         \boxmaxdepth\maxdepth\egroup
       \fi
     \vbadness\count@
-%    \end{macrocode}
-% Ok, setting \cmd{\outputpenalty} like this is actually incorrect.
-% It should really be set from the unboxed material from box~0 above.
-%    \begin{macrocode}
-    \setbox\z@
-      \ifvoid\FN@tempbox \box\FN@tempbox \else
-        \ifnum\outputpenalty<\@M
-          \vbox{\unvbox\FN@tempbox\penalty\outputpenalty}%
-          \global\outputpenalty=\@M
-        \else \box\FN@tempbox
-        \fi
-      \fi
+    \setbox\z@\box\FN@tempbox
     \let\@elt\relax
 %    \end{macrocode}
 % Ok, now we have in box~255 the split off stuff for the current
@@ -2278,7 +2288,7 @@
 % footnotes (since the penalty of~10000 is not easy to compensate)
 % and corresponds rather closely to \TeX's own idea of footnote
 % splitting.
-
+%
 % The following routine will analyze the last box where the results
 % from \cmd{\splitdiscards} are stored and return the penalty
 % associated with the breakpoint in the macro
@@ -2509,7 +2519,7 @@
 %    \begin{macrocode}
         \setbox\tw@\vsplit\z@ to%
           \dimexpr\FN@vsize*\@m/\count\FN@currentinsertion
-          -\FN@myvsize-\splitmaxdepth
+          -\FN@myvsize
         \relax
         \ifnum\FN@defaultpenalty>-\@M
           \setbox\z@\vbox\bgroup\unvbox\z@\setbox\z@\lastbox
