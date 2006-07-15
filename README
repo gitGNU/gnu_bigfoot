@@ -2,8 +2,7 @@ This is the bigfoot bundle for critical edition typesetting and other
 concerns, written by David Kastrup (mailto:dak@gnu.org).  The complete
 package in development can be accessed using the CVS instructions at
 <URL:http://sarovar.org/projects/bigfoot>, and
-CTAN:/macros/latex/contrib/bigfoot should provide released versions
-once they are fit for general consumption.
+CTAN:/macros/latex/contrib/bigfoot provides released versions.
 
 The whole bundle is released under the GPL version 2 (or later).  Part
 of the work has been sponsored or commissioned by various parties
@@ -37,19 +36,19 @@ suffix.dtx: This is the doc source for `suffix.sty', a package that
    \=>, or things like \footnote' macros, or \footnote<...\footnote>
    with different formatting/numbering and so on.
 
-perpage.sty: Work in progress, CVS only.  Used for keeping counters
-   sorted in order of page appearance and making numbering per page
-   possible.
+perpage.dtx: This is the doc source for `perpage.sty'.  Used for
+   keeping counters sorted in order of page appearance and making
+   numbering per page possible.
 
-bigfoot.dtx: Work in progress, CVS only.  This is the doc source for
-   `bigfoot.sty'.  Used for solving every problem around footnotes and
-   then some.  Deals with nested footnotes in several apparatus, uses
-   a backtracking algorithm for finding the optimal break across
-   several footnotes, automatically breaks in-paragraph style
-   footnotes across pages, uses fuzzy logic for deciding about when to
-   prefer in-paragraph layout to one-footnote-per-paragraph layout on
-   a per-note and per-block basis, deals with colors in footnotes even
-   when broken across pages, adapts the document class's footnote
-   style to in-paragraph footnotes as good as it can, allows
-   customization of styles differing across footnote blocks, allows
-   verbatim text in footnotes and so on.
+bigfoot.dtx: This is the doc source for `bigfoot.sty'.  Used for
+   solving every problem around footnotes and then some.  Deals with
+   nested footnotes in several apparatus, uses a backtracking
+   algorithm for finding the optimal break across several footnotes,
+   automatically breaks in-paragraph style footnotes across pages,
+   uses fuzzy logic for deciding about when to prefer in-paragraph
+   layout to one-footnote-per-paragraph layout on a per-note and
+   per-block basis, deals with colors in footnotes even when broken
+   across pages, adapts the document class's footnote style to
+   in-paragraph footnotes as good as it can, allows customization of
+   styles differing across footnote blocks, allows verbatim text in
+   footnotes and so on.

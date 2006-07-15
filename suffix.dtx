@@ -1,26 +1,25 @@
-%%\iffalse
-%%     suffix.dtx for defining variant commands.
-%%     Part of the critical bundle around bigfoot.
-%%     Copyright (C) 2004 David Kastrup
+% \iffalse
 %%
-%%     This program is free software; you can redistribute it and/or modify
-%%     it under the terms of the GNU General Public License as published by
-%%     the Free Software Foundation; either version 2 of the License, or
-%%     (at your option) any later version.
+%% perpage is part of the bigfoot bundle for critical typesetting
+%% Copyright 2002, 03, 04, 05, 06  David Kastrup <dak@gnu.org>
 %%
-%%     This program is distributed in the hope that it will be useful,
-%%     but WITHOUT ANY WARRANTY; without even the implied warranty of
-%%     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-%%     GNU General Public License for more details.
-%%
-%%     You should have received a copy of the GNU General Public License
-%%     along with this program; if not, write to the
-%%     Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-%%     Boston, MA 02111-1307  USA
-%%\fi
-% \CheckSum{220}
+% This program is free software; you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation; either version 2 of the License, or
+% (at your option) any later version.
+%
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License
+% along with this program; if not, write to the Free Software
+% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+% \fi
+% \CheckSum{206}
 % \GetFileInfo{suffix.sty}
-% \author{David Kastrup\thanks{\href{mailto:dak@gnu.org}^^A
+% \author{David Kastrup\thanks{\href{mailto:dak@gnu.org}
 %   {Email: \texttt{dak@gnu.org}}}}
 % \title{The \texttt{suffix} Package\\Version \fileversion}
 % \date{\filedate}
@@ -78,18 +77,29 @@
 %   |\csname|\cmd{\NoSuffixName}\meta{macro}|\endcsname|
 % \end{quote}
 % \StopEventually{}
+% \section{The driver file for the documentation}
+% Installation is done by |bigfoot.ins|, so look there for more
+% information for that.  Here comes the documentation driver.
+%    \begin{macrocode}
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage{hyperref}
+\usepackage{suffix}
+\begin{document}
+\OnlyDescription
+%<driver> \AlsoImplementation
+\DocInput{suffix.dtx}
+\end{document}
+%</driver>
+%    \end{macrocode}
 % \section{Implementation}
 % First we announce the package and check for e\TeX~2.
 %   \begin{macrocode}
 %<*style>
-\def\next$#1: #2${#2}
-{\catcode`\-\active \def-{.}
-  \xdef\reserved@a{\next$Name:  $}}
-\ifx\reserved@a\@empty \edef\reserved@a{CVS-\next$Revision: 1.4 $}\fi
 \def\next$#1: #2 #3${#2}
 \edef\next{\noexpand
-  \ProvidesPackage{suffix}[\next$Date: 2004/11/09 01:45:53 $
-  \reserved@a Variant command support]}
+  \ProvidesPackage{suffix}[\next$Date: 2006/07/15 21:24:56 $
+  \next$Revision: 1.5 $ Variant command support]}
 \next
 \ifcase\ifx\eTeXversion\@undefined \@ne\fi
   \ifnum\eTeXversion<\tw@ \@ne\fi\z@
@@ -219,18 +229,7 @@
 %</style>
 %    \end{macrocode}
 %\end{macro}
-% \section{The driver file for the documentation}
-% Installation is done by |bigfoot.ins|, so look there for more
-% information for that.  Here comes the documentation driver.
-%    \begin{macrocode}
-%<driver> \documentclass{ltxdoc}
-%<driver> \usepackage{hyperref}
-%<driver> \usepackage{suffix}
-%<driver> \begin{document}
-%<driver> \DocInput{suffix.dtx}
-%<driver> \end{document}
-%    \end{macrocode}
-% \Finale{}
+% \Finale
 % \endinput
 % Local Variables:
 % mode: doctex

@@ -1,5 +1,23 @@
-\iffalse
+% \iffalse
+%%
+%% bigfoot is part of the bigfoot bundle for critical typesetting
+%% Copyright 2004, 05, 06  David Kastrup <dak@gnu.org>
+%%
+% This program is free software; you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation; either version 2 of the License, or
+% (at your option) any later version.
+%
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License
+% along with this program; if not, write to the Free Software
+% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
+% \CheckSum{4157}
 % \GetFileInfo{bigfoot.sty}
 % \title{The \texttt{bigfoot} package\\version \fileversion}
 % \date{\filedate}
@@ -66,8 +84,6 @@
 % \end{itemize}
 % As an example of how simple the usage can be, here is the
 % documentation driver for this document:
-% \iftrue
-\fi
 %    \begin{macrocode}
 %<*driver>
 \documentclass{ltxdoc}
@@ -78,7 +94,11 @@
 % After loading the packages, we declare two footnote blocks.  One is
 % the default footnote block, another block is called~|B| and is
 % numbered with letters.  The letters start new on each page.  Both
-% footnote blocks default to in-paragraph footnotes.
+% footnote blocks default to in-paragraph footnotes.  Since the
+% block~|B| can get entries from both the main text as well as the
+% default footnote block, the entries are not necessarily generated in
+% page order.  So we need to use a sorted counter to fix this (feel
+% free to try what happens when using an unsorted counter).
 %    \begin{macrocode}
 \DeclareNewFootnote[para]{default}
 \DeclareNewFootnote[para]{B}[alph]
@@ -96,7 +116,7 @@
 %    \end{macrocode}
 % Actually, that already was all.  We can now start the document.  The
 % following makes sure that we get the full documentation only by
-% compiling the driver file:
+% compiling the separate driver file:
 %    \begin{macrocode}
 \begin{document}
 \OnlyDescription
@@ -115,6 +135,11 @@
 % the customization possibilities of |bigfoot| with regards to
 % multiple footnote blocks and rules between them, refer to
 % |manyfoot|'s documentation.
+%
+% |bigfoot| contains a lot of bells and whistles for defining your
+% footnote formats and can use different formats for different
+% footnote blocks.  Those expert options are not documented separately
+% yet: look through the code sections to see them explained.
 % \StopEventually{}
 % \section{The implementation}
 % \subsection{Startup code}
@@ -124,8 +149,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/07/07 10:25:26 $
-  \FN@next $Revision: 1.24 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/07/15 21:24:56 $
+  \FN@next $Revision: 1.25 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -156,7 +181,9 @@
       \fi}}}
 %    \end{macrocode}
 % The |trace| option is only available if you used |docstrip| while
-% explicitly requesting |trace| functionality.
+% explicitly requesting |trace| functionality.  If you set the |trace|
+% option, the next option specifies a bit map of trace bits.
+%
 % The following bits can be set in tracing:
 % \begin{tabular}{rl}
 %   1&break decisions\\
@@ -175,6 +202,11 @@
 %<trace>  \showboxbreadth100
 %<trace>  \tracingonline=\@ne}%
 %<trace>}
+%    \end{macrocode}
+% The |tracepage| option is followed by another option specifying the
+% page to be traced.  If you use it, tracing happens only on the
+% specified page.  Only a single page can be specified.
+%    \begin{macrocode}
 %<trace>\def\FN@tracepage{\c@page}
 %<trace>\DeclareOption{tracepage}{%
 %<trace>  \DeclareOption*{\edef\FN@tracepage{\CurrentOption}%
@@ -189,7 +221,9 @@
 % |hyperref| was already loaded or is going to be loaded, we turn off
 % its footnote support.  If you think you know what you are doing, you
 % can use \cmd{\hypersetup} to turn it on again before the start of
-% the document.
+% the document.  Unfortunately, it appears like \cmd{\hypersetup}
+% refuses to be called more than once, so this actually does not work
+% unless you load |hyperref| last.
 %    \begin{macrocode}
 \ifx\hypersetup\@undefined
   \PassOptionsToPackage{hyperfootnotes=false}{hyperref}
@@ -220,7 +254,7 @@
 % |manyfoot|, they have not made it into its distribution at the
 % current point of time.  In the interest of stability, it would
 % probably be best just to incorporate the parts from |manyfoot| that
-% get used by |bigfoot|.  Whatever.
+% get used by |bigfoot|.  This has not yet been done.
 %
 % \begin{macro}{\MFL@reinsout}
 %   We need the appropriate splitting parameters set for the footnote
@@ -316,6 +350,18 @@
     \ifvbox\z@ \MFL@removevboxes \unvbox\z@\fi}}
 %    \end{macrocode}
 % \end{macro}
+% \begin{macro}{\NCC@makefnmark}
+%   This provides the command in case it is not present (some versions
+%   did not have it).
+%    \begin{macrocode}
+\ifx\NCC@makemark\@undefined
+  \ifx\NCC@makefnmark\@undefined \else
+    \def\NCC@makemark{\NCC@makefnmark}
+  \fi
+\fi
+%    \end{macrocode}
+% \end{macro}
+%
 % While the above operations actually were fixes to |manyfoot|, now we
 % actually patch it for our own purposes.  When allocating a new
 % footnote, we set its maximum dimension to \cmd{\maxdimen} (since no
@@ -780,7 +826,7 @@
 %   being large), it is set entirely in vertical mode.
 %
 %   In addition, the ratio of purely vertical footnotes must not fall
-%   below \cmd{\vtypefraction}.  If both of these conditions are
+%   below \cmd{\vtypefraction}.
 %    \begin{macrocode}
 \def\hfootfraction{0.9}
 \def\vtypefraction{0.6}
@@ -984,10 +1030,23 @@
 % \end{macro}
 % \end{macro}
 % \end{macro}
+% \begin{macro}{\MFL@fnoteplain}
+% \begin{macro}{\MFL@fnotepara}
+%   We redefine |manyfoot|'s basic footnote calls to use our own,
+%   versatile variant.
 %    \begin{macrocode}
 \def\MFL@fnoteplain{\FN@fnotenested{plain}}
 \def\MFL@fnotepara{\FN@fnotenested{para}}
-
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \begin{macro}{\FN@fnotenested}
+%   This is somewhat contorted: we want |\footnote+| to be in |plain|
+%   style and |\footnote-| in |para| style regardless of the current
+%   footnote style.  Adding a second |+| or |-| after the first will
+%   actually restyle all footnotes coming afterwards appropriately.
+%   This should work for all footnote commands getting footnote text.
+%    \begin{macrocode}
 \def\FN@fnotenested#1#2#3{%
   \edef\reserved@d{#1}%
   \FN@checkvariant{\edef\reserved@d}{%
@@ -1006,15 +1065,30 @@
     \@firstoftwo
   \fi\fi
   \reserved@b}
-
+%    \end{macrocode}
+% \end{macro}
+% In order to be able to sort footnotes according to the order of
+% their reference points, we use a sorted counter.
+%    \begin{macrocode}
 \newcounter{FN@totalid}
 \MakeSorted{FN@totalid}
-
+%    \end{macrocode}
+% \begin{macro}{\FN@fnoteplain}
+% \begin{macro}{\FN@fnotepara}
+%   The actual commands are easy enough:
+%    \begin{macrocode}
 \def\FN@fnoteplain{\FN@fnotecommon\vbox}
 \def\FN@fnotepara{\FN@fnotecommon\hbox}
-
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \begin{macro}{\FN@masterinsert}
+%   This contains the insert number of the insert where the footnote
+%   mark appears.  If it appears in the main text, 255~will be used.
+%    \begin{macrocode}
 \def\FN@masterinsert{\@cclv}
 %    \end{macrocode}
+% \end{macro}
 % \begin{macro}{\FN@id}
 % \begin{macro}{\FN@master}
 % \begin{macro}{\FN@slave}
@@ -1047,23 +1121,42 @@
 % \end{macro}
 % \end{macro}
 % \end{macro}
+% \begin{macro}{\FN@errorstack}
+%   This records the history of nested footnotes in order to deliver
+%   more useful error messages.
 %    \begin{macrocode}
-\ifx\NCC@makemark\@undefined
-  \ifx\NCC@makefnmark\@undefined \else
-    \def\NCC@makemark{\NCC@makefnmark}
-  \fi
-\fi
-
 \let\FN@errorstack\@empty
-
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@fnotecommon}
+%   Well, this is the work horse if the footnote macro.  Really bad
+%   thing.  We start off by stepping our absolute counter and making a
+%   mark.  \cmd{\leavevmode} is required so that the action of
+%   |perpage.sty| is done smoothly.
+%    \begin{macrocode}
 \def\FN@fnotecommon#1#2#3{%
   \leavevmode
   \stepcounter{FN@totalid}%
   \NCC@makemark{#3}%
+%    \end{macrocode}
+%   It is an error if the footnote insert number of the current
+%   footnote does not correspond to a block below the current
+%   insertion level.
+%    \begin{macrocode}
   \ifnum#2<\FN@masterinsert
     \FN@colorstackbgroup\MFL@minipage
     \FN@newslot\FN@masterslot
     \count@\FN@id
+%    \end{macrocode}
+%   \cmd{\dimen@} is here set to a sorting criterion.  This is
+%   designed to make the conversion of footnote blocks as reliable as
+%   possible.  If we could guarantee convergence, just using
+%   \cmd{\c@FN@totalid} would be sufficient for sorting.  It turns out
+%   that this is too sensitive to footnotes of different blocks
+%   changing pages, so the number of the superior footnote block is
+%   allowed to take precedence by multiplying it with 4194304 which is
+%   unlikely to get exceeded by \cmd{\c@FN@totalid}.
+%    \begin{macrocode}
     \dimen@=\dimexpr64\p@*\FN@masterinsert-\c@FN@totalid sp\relax
     \def\FN@masterinsert{#2}%
     \edef\FN@errorstack{\FN@errorstack^^J%
@@ -1071,14 +1164,19 @@
     \let\FN@boxtype=#1%
     \setbox\z@#1\bgroup
 %    \end{macrocode}
-% The following is for the likes of PDF\TeX\ which has its own idea
-% about how to restore a color stack.
+%   The following is for the likes of PDF\TeX\ which has its own idea
+%   about how to restore a color stack.
 %    \begin{macrocode}
       \let\current@color\default@color
       \FN@@color@begingroup
       \let\MFL@minipage\relax
       \let\MFL@endminipage\relax
       \@makefnstartbox
+%    \end{macrocode}
+%   We reset the list parameters in footnotes.  Strictly speaking,
+%   this is interfering with \LaTeX's standard operation, but the
+%   standard operation does not make sense.
+%    \begin{macrocode}
       \let\@listdepth\@mplistdepth \@mplistdepth\z@
       \@itemdepth\z@ \@enumdepth\z@
       \protected@edef\@currentlabel{\csname p@footnote%
@@ -1086,10 +1184,25 @@
       \ifx\FN@boxtype\vbox \normalcolor\nobreak
       \else \FN@specific{#2}\@preparefnhtext \normalcolor
       \fi
+%    \end{macrocode}
+%   After preparation, we now do the big bad trick for making
+%   footnotes cooperate with \cmd{\verb} and other catcode changing
+%   things: we call \cmd{\@makefntext} with an argument of
+%   |\iffalse|.  This kills off its expansion right at the point
+%   where it would choose to place its argument.
+%    \begin{macrocode}
       \FN@specific{#2}\@makefntext
       \iffalse\fi
+%    \end{macrocode}
+%   Record the footnote specific dimensions.  It is assumed that they
+%   don't change in the document, at least not before the footnote
+%   gets actually placed.
+%    \begin{macrocode}
       \expandafter\xdef\csname FN@ht\number#2\endcsname{\the\footnotesep}%
       \expandafter\xdef\csname FN@dp\number#2\endcsname{\the\dp\strutbox}%
+%    \end{macrocode}
+%   The footnote gets markers for identifying it and its starting block.
+%    \begin{macrocode}
       \marks\FN@master{\FN@masterslot}%
       \marks\FN@slave{\number\FN@id}%
       \nobreak
@@ -1121,22 +1234,30 @@
         \afterassignment\ignorespaces
         \expandafter\FN@fnotecommonii
       \else
+%    \end{macrocode}
+%   We still needed to cater for the error of badly anchored footnotes:
+%    \begin{macrocode}
     \PackageError{bigfoot}{#2 forbidden in \FN@masterinsert.}%
     {Higher-placed footnotes can't be anchored in inferior ones.^^J%
     I am not putting this text in a footnote.  History:%
 \FN@errorstack}%
     \rule{1em}{\ht\strutbox}%
 \fi}
-
-\def\FN@fnotecommonii#{\let\next}
-
 %    \end{macrocode}
-% Ok, color handling is a nuisance, to say the least.  Split
+% \end{macro}
+% \begin{macro}{\FN@fnotecommonii}
+%   This just swallows the opening brace of the footnote text and then
+%   lets the footnote text progress.  The closing group will then
+%   trigger the processing via \cmd{\aftergroup}.
+%    \begin{macrocode}
+\def\FN@fnotecommonii#{\let\next}
+%    \end{macrocode}  
+% \end{macro}
+% % Ok, color handling is a nuisance, to say the least.  Split
 % footnotes need to close their color stack on the old page, and reopen
 % it on the new one.  So we record the color stack state at each time
 % it changes in a marks register.
 %    \begin{macrocode}
-
 \newmarks\FN@color
 \def\FN@colorstackbgroup{\let\FN@savecolorstack\FN@colorstack
   \global\let\FN@colorstack\@empty
@@ -1185,7 +1306,16 @@
   \def\@elt##1##2{##2\def\current@color{##1}\set@color}%
   #1%
   \let\@elt\relax}
-
+%    \end{macrocode}
+% \begin{macro}{\FN@commonending}
+%   We'll eventually arrive here at the end of the footnote.  Now we
+%   again call \cmd{\@makefntext}, but this time pass it |\fi| as
+%   its argument, and place |\iffalse| before its expansion.  This
+%   cuts away the start of the macro.  If this start changes the tail
+%   of the macro when executed, the whole trickery will not work.  It
+%   turns out that a large sampling of document classes (including the
+%   standard ones) happens to work.
+%    \begin{macrocode}
 \def\FN@commonending{%
   \expandafter\expandafter\expandafter
   \expandafter\expandafter\expandafter\expandafter
@@ -1197,6 +1327,16 @@
   \egroup
   \global\advance\FN@id\@ne
   \FN@slotxdef\FN@masterslot{\number\FN@id}%
+%    \end{macrocode}
+%   Now we want to get an upper estimate of the size.  In case of a
+%   horizontal box, we do this by creating a vertical box of it all
+%   alone, and measuring that.  Measuring the hbox itself is plain
+%   out: \TeX's maximal dimension of something like 5\,m is already
+%   busted with about two pages of material.  We put the master slot
+%   identification into the depth of the box, and arrange for the
+%   total of depth and height of the box to still give the total depth
+%   and height of its size on the page.
+%    \begin{macrocode}
   \ifhbox\z@
     \global\setbox\FN@tempbox\copy\z@
     \setbox\tw@\@makefnvbox{\unhbox\FN@tempbox}%
@@ -1204,17 +1344,30 @@
   \else
     \ht\z@\dimexpr\ht\z@+\dp\z@-\FN@masterslot sp\relax
   \fi
+%    \end{macrocode}
+%   Now we put the sorting criterion into the width of the box, and
+%   then put the masterslot id into the depth.
+%    \begin{macrocode}
   \wd\z@\dimen@
   \dp\z@\FN@masterslot sp\relax
 %<trace>      \ifnum\z@<0\FN@slotget{\FN@masterslot} %
 %<trace>      \else \errmessage{Inconsistent
 %<trace>        \string\FN@masterslot=\FN@masterslot}\fi
+%    \end{macrocode}
+%   Now we just need to place the stuff into an insertion and record
+%   the possibly changed slave id in order to know what subordinate
+%   footnotes belong to this one.
+%    \begin{macrocode}
   \MFL@insert\FN@masterinsert{\nointerlineskip\box\z@}%
   \marks\FN@slave{\number\FN@id}%
   \MFL@endminipage
   \FN@colorstackegroup
 }
-
+%    \end{macrocode}
+% \end{macro}
+% A lot of stuff follows.  This should really be cleaned up and
+%   documented.
+%    \begin{macrocode}
 \dimen\footins\maxdimen
 \gdef\FN@nestlist{}
 
@@ -3067,6 +3220,7 @@
 %    \end{macrocode}
 % Ok, here is debugging code intercepting all calls of the regular
 % output routine and reporting its entry and exit states.
+%    \begin{macrocode}
 %<trace> \newtoks\FN@tr@output
 %<trace> \FN@tr@output\output
 %<trace> \output{\if\foottrace8{%
@@ -3120,16 +3274,19 @@
 %<installer> \input docstrip
 %<installer&make> \askforoverwritefalse
 %<installer> \generate{
-%<installer>    \file{suffix.drv}{\from{suffix.dtx}{driver}}
 %<installer>    \file{bigfoot.drv}{\from{bigfoot.dtx}{driver}}
+%<installer>    \file{perpage.drv}{\from{perpage.dtx}{driver}}
+%<installer>    \file{suffix.drv}{\from{suffix.dtx}{driver}}
 %<installer&!make>    \usedir{tex/latex/bigfoot}
-%<installer>    \file{suffix.sty}{\from{suffix.dtx}{style}}
 %<installer>    \file{bigfoot.sty}{\from{bigfoot.dtx}{style}}
+%<installer>    \file{perpage.sty}{\from{perpage.dtx}{style}}
+%<installer>    \file{suffix.sty}{\from{suffix.dtx}{style}}
 %<installer> }
 %<installer> \endbatchfile
 %    \end{macrocode}
+% \Finale
 % \endinput
 % Local Variables:
 % mode: doctex
-% TeX-master: t
+% TeX-master: "bigfoot.drv"
 % End:

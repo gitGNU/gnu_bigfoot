@@ -1,3 +1,16 @@
+2006-07-15  David Kastrup  <dak@gnu.org>
+
+	* README: Adapt to perpage.dtx being available.
+
+	* bigfoot.dtx: Unpack perpage as well.
+
+	* suffix.dtx: Streamline header with rest of bigfoot.  Make
+	self-sufficient compile.
+
+	* perpage.dtx: created as source of perpage.sty
+
+	* perpage.sty: removed because perpage.dtx exists.
+
 2006-07-07  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: Add `tracepage' option.  Try breaking to correct
