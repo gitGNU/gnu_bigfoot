@@ -17,7 +17,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{363}
+% \CheckSum{372}
 % \GetFileInfo{perpage.sty}
 % \date{\filedate}
 % \author{David Kastrup\thanks{\texttt{dak@gnu.org}}}
@@ -157,8 +157,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\next$#1: #2 #3${#2}
-\ProvidesPackage{perpage}[\next$Date: 2006/07/15 21:43:23 $
-  \next$Revision: 1.12 $ Reset/sort counters per page]
+\ProvidesPackage{perpage}[\next$Date: 2006/08/03 21:21:56 $
+  \next$Revision: 1.13 $ Reset/sort counters per page]
 %    \end{macrocode}
 % \begin{macro}{\AddAbsoluteCounter}
 % adds a counter with prefix |abs| to a given counter.  It typesets as
@@ -379,15 +379,18 @@
 % \begin{macro}{\pp@writectr}
 %   This is the common ending of all pseudo reset counters.  It writes
 %   out an appropriate command to the |.aux| file with all required
-%   information.
+%   information.  We try to replicate any sentinel kerns or penalties.
 %    \begin{macrocode}
 \def\pp@writectr#1#2#3{\edef\next{%
     \string#1{#2}{\number\value{pp@a@#2}}{#3}{\noexpand\thepage}}%
   \pp@chkvlist
   \dimen@=\lastkern
   \ifdim\dimen@=\z@ \else \unkern\fi
+  \count@=\lastpenalty
   \protected@write\@auxout{}{\next}%
-  \ifdim\dimen@=\z@ \nobreak \else \kern\dimen@\fi
+  \ifdim\dimen@=\z@
+    \penalty \ifnum\count@<\@M \@M \else \count@ \fi
+  \else \kern\dimen@\fi
   \afterassignment\endgroup\count@}
 %    \end{macrocode}
 % \end{macro}
@@ -455,7 +458,6 @@
   \ifx\pp@page\@empty
   \else \setcounter{#1}{\pp@label}\fi
   \pp@writectr\pp@ppagectr{#1}{\noexpand\theabspage}}
-%</style>
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\pp@ppagectr}
@@ -471,6 +473,7 @@
     \edef\next{\noexpand
       \@newl@bel{pp@r@#1}{#2}{{\number\value{pp@a@#1}}{#3}%
         {#4}}}\next}}
+%</style>
 %    \end{macrocode}
 % \end{macro}
 % 

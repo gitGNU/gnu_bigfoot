@@ -1,3 +1,8 @@
+2006-08-03  David Kastrup  <dak@gnu.org>
+
+	* perpage.dtx: Try to replicate sentinel penalties.  Move `/style'
+	goard to where it belongs.
+
 2006-07-15  David Kastrup  <dak@gnu.org>
 
 	* README: Adapt to perpage.dtx being available.
