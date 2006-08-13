@@ -1,3 +1,22 @@
+2006-08-13  David Kastrup  <dak@gnu.org>
+
+	* README: Adapt to CTAN requirements and mope about them.
+
+	* bigfoot.dtx: Fix wrong handling of `\clubpenalties'.  Make
+	`\hfootfraction' and `vtypefraction' trigger a vertical block when
+	either gets exceeded.  Increase the default of `vtypefraction'.
+	Use `\vfuzz' in addition to `\vbadness' in a lot of places.
+	Box255 can't be empty when reaching the output routine: remove
+	dead code.  Try to avoid having signal penalties (when replaced by
+	10000 by the output routine) remove valid breakpoints.  Let
+	`\FN@getbreakpenalty' not truncate penalties to -10000.  Fix some
+	trace messages.  Try to account for depth of main box material
+	properly.  Probably not the last iteration, though.
+
+2006-08-04  David Kastrup  <dak@gnu.org>
+
+	* README: make the process of generating the docs more explicit.
+
 2006-08-03  David Kastrup  <dak@gnu.org>
 
 	* perpage.dtx: Try to replicate sentinel penalties.  Move `/style'

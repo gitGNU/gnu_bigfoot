@@ -15,18 +15,42 @@ eTeX 2 as the LaTeX engine.  Newer distributions already are
 eTeX-based; with older distributions you might need to use the
 `elatex' command.
 
+On CTAN, precompiled PDF versions of the .dtx documentation (excluding
+the documented source code) are provided because of CTAN policy.  They
+are not required for installation, as they can easily be reproduced by
+running `pdflatex' on the .dtx files after unpacking (see
+`bigfoot.ins' below).  In an installed TeX tree, however, DVI files
+would be much more appropriate because of file size and access speed.
+You can generate them by running `latex' on the .dtx files or the .drv
+files.  In the latter case, the source code documentation will be
+included.
+
 File descriptions for available files:
 
 bigfoot.ins: This is a generated file and not in the CVS archive (but
-   on CTAN).  If you need to generate it, you can do so by running
-   `tex docstrip' and answering the prompts
+   on CTAN).  Generating it can be done by running `tex docstrip' and
+   answering the prompts
 
      \infileext=dtx
      \outfileext=ins
      \Options=installer
      \filelist=bigfoot
 
-   Running TeX on bigfoot.ins will generate further files.
+   If you instead use
+
+     \Options=installer,make
+
+   you will get a version of `bigfoot.ins' which will not ask before
+   overwriting files, but will only place them in the current
+   directory even if your docstrip configuration contains target
+   directory declarations.
+
+   Running TeX on bigfoot.ins will generate a number of style files
+   (with the extension .sty) and a number of documentation driver
+   files (with the extension .drv).
+
+
+Here come the source files themselves:
 
 suffix.dtx: This is the doc source for `suffix.sty', a package that
    makes it very easy to define command variants like \macro* or

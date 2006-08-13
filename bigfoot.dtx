@@ -17,7 +17,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{4157}
+% \CheckSum{4204}
 % \GetFileInfo{bigfoot.sty}
 % \title{The \texttt{bigfoot} package\\version \fileversion}
 % \date{\filedate}
@@ -149,8 +149,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/07/15 21:24:56 $
-  \FN@next $Revision: 1.25 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/08/13 17:20:51 $
+  \FN@next $Revision: 1.26 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -724,7 +724,7 @@
 %    \begin{macrocode}
 \def\@makefnvtext#1{%
   \FN@specific\FN@masterinsert\@makefntext{%
-    \clubpenalties\tw@\@MM\clubpenalty
+    \clubpenalties\thr@@\@MM\clubpenalty\z@
     \vadjust{\nobreak\vskip-\baselineskip}\nobreak\hfill\break#1}}
 %    \end{macrocode}
 % \end{macro}
@@ -798,16 +798,17 @@
 \finalfootnotewidowpenalty=4000
 %    \end{macrocode}
 % \begin{macro}{\@makefnvbox}
-% This is the formatting code for a vertical mode footnote box.  It
-% uses \cmd{\@makefnstartbox} for setting up the initial widow/club
-% penalties, and \cmd{\@makefnendbox} for preparing the final end.  It
-% results in a vbox, but its argument, a stream of horizontal and
-% vertical material, is typeset in
+%   This is the formatting code for a vertical mode footnote box from
+%   already set horizontal material.  It uses \cmd{\@makefnstartbox}
+%   for setting up the initial widow/club penalties, and
+%   \cmd{\@makefnendbox} for preparing the final end.  It results in a
+%   vbox, but its argument, a stream of horizontal and vertical
+%   material, is typeset in
 %    \begin{macrocode}
 \ifx\@makefnvbox\@undefined
   \def\@makefnvbox#1{\vbox{%
       \@makefnstartbox
-      \clubpenalties\tw@\@MM\clubpenalty
+      \clubpenalties\thr@@\@MM\clubpenalty\z@
       \let\@thefnmark\@empty
       \FN@specific\FN@masterinsert\@makefntext{\rule\z@\footnotesep
         \nobreak
@@ -821,15 +822,12 @@
 %   Those parameters govern when a footnote block is going to be set
 %   completely in vertical mode.  If a footnote block does not shrink
 %   to less than \cmd{\hfootfraction} its size when using in-paragraph
-%   notes and, has at least \cmd{\vtypefraction} of forcedly vertical
+%   notes or has at least \cmd{\vtypefraction} of forcedly vertical
 %   footnotes (specified as purely vertical, or vertical because of
 %   being large), it is set entirely in vertical mode.
-%
-%   In addition, the ratio of purely vertical footnotes must not fall
-%   below \cmd{\vtypefraction}.
 %    \begin{macrocode}
 \def\hfootfraction{0.9}
-\def\vtypefraction{0.6}
+\def\vtypefraction{0.7}
 %    \end{macrocode}
 % \end{macro}
 % \end{macro}
@@ -875,12 +873,13 @@
     \setbox\z@\@makefnvbox{%
       {\unhbox\FN@tempbox}%
       \setbox\z@\lastbox\FN@joinhboxes}%
-    \ifdim\FN@vfound>\dimexpr\vtypefraction\p@*\FN@found\relax
-      \ifdim\dimexpr \ht\z@+\dp\z@>\hfootfraction\dimen@ii
-        \global\setbox\FN@tempbox\box\tw@
-        \setbox\z@\@makefnvbox{\let\@makefnbreak\FN@pseudofillbreak
-            {\unhbox\FN@tempbox}\setbox\z@\lastbox\FN@joinhboxes}%
-      \fi
+    \ifcase
+      \ifdim\FN@vfound>\dimexpr\vtypefraction\p@*\FN@found\relax \@ne\fi
+      \ifdim\dimexpr \ht\z@+\dp\z@>\hfootfraction\dimen@ii \@ne\fi \z@
+    \or
+      \global\setbox\FN@tempbox\box\tw@
+      \setbox\z@\@makefnvbox{\let\@makefnbreak\FN@pseudofillbreak
+          {\unhbox\FN@tempbox}\setbox\z@\lastbox\FN@joinhboxes}%
     \fi
     \setbox\tw@\box\voidb@x
     \ht\z@\dimexpr \ht\z@+\dp\z@-\dimen@\relax
@@ -1806,7 +1805,8 @@
 \def\FN@insertmarks{%
   {\setbox\z@\copy\@cclv
     \splittopskip-\maxdimen\relax
-    \vbadness=\maxdimen
+    \vbadness=\@M
+    \vfuzz=\maxdimen
     \loop
     \ifvoid\z@\else
       {\let\@elt\FN@pseudomarks
@@ -1899,21 +1899,31 @@
 % \item We are looking for missing insertions that may have floated.
 % \end{enumerate}
 %
-% In the situation where the page break has already been determined
-% (magic output penalty, looking for missing insertions), we are not
-% interested in `foreign' insertions like floating figures.  The
-% current code does not cater for them.
+% We are trying to do bookkeeping on the effects of page size for
+% insertions that fall into the footnote class.  While we do basic
+% bookkeeping for other insertions as well, this can only be
+% incomplete since we don't reinsert material.  In consequence,
+% multiple material ending up in the same insertion might cause the
+% corresponding skip register to be accounted for several times.
+% \LaTeX\ does not really reuse insertions in that manner except for
+% footnotes, so we are mostly ok here.
+%
+% |bigfoot| usually does some lookahead in the main list in order to
+% obtain optimal breakpoints.  It explicitly undoes the effect this
+% has on marks, but insertions are a different matter here.  So floats
+% may appear on an earlier page than expected.
 %
 % If the output routine is invoked with a penalty of $-13750$, then
 % the page content is merely used for setting the \cmd{\topmarks}
 % array.  In that case, we just clear out the output box and resume.
 % We don't fiddle with \cmd{\deadcycles} in order to catch foulups.
+%
 % Also we don't touch insertion boxes.  There is a particular
 % situation where there \emph{are} insertions, namely if we are
 % collecting insertions after the last output routine has ended up
 % with a non-zero value of \cmd{\insertpenalties}.  In this case, all
 % insertions we \emph{do} get are floating insertions, meaning that
-% the had a preceding insertion of the same class already on the last
+% they had a preceding insertion of the same class already on the last
 % page, and thus we have zeroed its skip register already.  We are
 % assuming that a single pass with such a large \cmd{\vsize} is
 % sufficient for pulling all insertions.  If that happens to be
@@ -1922,11 +1932,11 @@
 % anyway.
 %    \begin{macrocode}
 \output{%
+  \ifvoid\@cclv \PackageError{bigfoot}{Empty box 255 in \output}\fi
 %<trace> \if\foottrace8%
 %<trace>   \message{entering output with
 %<trace>      \outputpenalty=\the\outputpenalty:}%
-%<trace>   \showbox\@cclv\fi
-% \ifnum\c@page=10 \traceon\fi
+%<trace>   {\showboxdepth4\showboxbreadth\maxdimen\showbox\@cclv}\fi
   \ifnum\outputpenalty=-13750
 %<trace>  \if\foottrace8%
 %<trace>    \message{Discarding box 255.}%
@@ -1949,13 +1959,9 @@
     \ifvoid\@holdpg
       \FN@sweeptopmarks
     \fi
-    \ifvoid\@cclv
-      \global\FN@outervsize\z@
-    \else
-      \global\FN@outervsize\ht\@cclv
-      \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
-      \global\advance\FN@outervsize-\ht\@cclv\relax
-    \fi
+    \global\FN@outervsize\ht\@cclv
+    \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
+    \global\advance\FN@outervsize-\ht\@cclv\relax
     \global\let\FN@vsadjustlist\@empty
     \FN@normaloutput
 %    \end{macrocode}
@@ -1979,11 +1985,9 @@
 % calling a special output, so that we can afterwards compensate for
 % it.
 %    \begin{macrocode}
-    \ifvbox\@cclv
-      \dimen@\ht\@cclv
-      \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
-      \global\advance\FN@outervsize\dimexpr\dimen@-\ht\@cclv\relax
-    \fi
+    \dimen@\ht\@cclv
+    \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
+    \global\advance\FN@outervsize\dimexpr\dimen@-\ht\@cclv\relax
 %    \end{macrocode}
 % Now we invalidate the cache boxes for all insertions that had
 % changed due to the recent additions to the page.
@@ -2006,19 +2010,15 @@
       \ifnum\FN@outputpenalty=-13749 \@ne\fi
       \ifnum\FN@outputpenalty=-13751 \@ne\fi \tw@
     \or
+%    \end{macrocode}
+% \cmd{\outputpenalty} is restored to the original value before the
+% total page is glued together.
+%    \begin{macrocode}
       \FN@vsadjustlist
 %<trace> \if\foottrace8\message{receiving special penalty
 %<trace>    \FN@outputpenalty, dissing box 255:}%
 %<trace>      {\showboxdepth4 \showboxbreadth400
 %<trace>       \tracingonline=\@ne\showbox\@cclv}\fi
-%    \end{macrocode}
-% We don't need to insert either discards or outputpenalties anywhere:
-% those are exclusively derived from our own inserted code.
-% Since the \cmd{\pagediscards} derive from our own insertion, we
-% clear them out.  \cmd{\outputpenalty} is restored to the original
-% value before the total page is glued together.
-%    \begin{macrocode}
-      \global\setbox\@cclv\vbox{\pagediscards}%
 %    \end{macrocode}
 % This special penalty means that we have been collecting floated
 % insertions right now.  So |\box255| is actually empty except for
@@ -2043,25 +2043,27 @@
 %    \end{macrocode}
 % Ok, now we reconstruct the box from its parts.  We add the material
 % together, taking the previous output penalty and the current page
-% discards for glueing the stuff together.  The previous output
+% discards (if it belongs between those boxes, otherwise we leave it
+% on the list) for glueing the stuff together.  The previous output
 % penalty then is irrelevant for further purposes and we replace it
 % again.  \cmd{\FN@outervsize} has been
 % adjusted by the accumulated contributions of insertions to the page
 % size.  Fiddling with it would not appear necessary or even prudent.
 %    \begin{macrocode}
-      \global\setbox\@cclv\vbox{\unvbox\z@
-        \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
-        \pagediscards
+      \global\setbox\@cclv\vbox{%
 %    \end{macrocode}
 % Now we might have had a \cmd{\topskip} value designed for requesting
 % a given number of lines.  We need to remove anything of that kind.
-% Splitting again achieves that.
+% Splitting again achieves that.  If the current page was empty except
+% for insertions, this means that we gain a new breakpoint.  But
+% insertions with discardable material before them would be unusual.
 %    \begin{macrocode}
-        \ifvbox\@cclv
-          \global\setbox\@cclv\vbox{\break\unvbox\@cclv}%
-          {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}%
-          \unvbox\@cclv
-        \fi
+        \unvbox\z@
+        \global\setbox\@cclv\vbox{\break\unvbox\@cclv}%
+        {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}%
+        \penalty\ifnum\outputpenalty<\@M \outputpenalty\else\z@\fi
+        \pagediscards
+        \unvbox\@cclv
         \boxmaxdepth\maxdepth}%
       \global\outputpenalty\FN@outputpenalty\relax
 %    \end{macrocode}
@@ -2108,6 +2110,7 @@
 % manner.
 %    \begin{macrocode}
   \FN@nest@iterate{\FN@insertouterspace\global\FN@vsize\dimexpr\z@}%
+  \global\advance\FN@vsize\FN@outervsize\relax
 %    \end{macrocode}
 % Now we sort the inserts and regenerate the cache.
 %    \begin{macrocode}
@@ -2121,9 +2124,10 @@
 % insertions (after paragraphs have been combined and too early
 % insertions moved to the next page) and also subtracts the flexible
 % glues associated with the insertions' skip registers, so this
-% flexibility is typically negative.
+% flexibility is typically negative.  Since the cache registers have
+% been explicitly cleared, \cmd{\FN@reconfig} starts from the state
+% where indeed no insertions are present.
 %    \begin{macrocode}
-  \global\advance\FN@vsize\FN@outervsize\relax
   \ifcase
     \ifnum\insertpenalties>\z@ \@ne\fi
 %    \end{macrocode}
@@ -2150,17 +2154,19 @@
 %    \begin{macrocode}
     \ifdim\FN@vsize<\glueshrink\FN@vsize \thr@@ \fi
 %    \end{macrocode}
-% 
 % page has appropriate size or we have special penalty.  If we have
 % come here not the first time, we might have arrived at a non-optimal
 % break.  So we attempt a split.
 %    \begin{macrocode}
     \ifx\FN@vsadjustlist\@empty \else \thr@@\fi\z@
-    \ifvbox\@cclv
-      {\vbadness\maxdimen
-        \global\setbox\@cclv\vbox
-          spread\FN@vsize{\unvbox\@cclv\boxmaxdepth\maxdepth}}%
-    \fi
+%    \end{macrocode}
+% Ok, now we get the default case in our big routine: case~0.  We just
+% pass the result onto the output routine.
+%    \begin{macrocode}
+    {\vbadness\@M
+      \vfuzz\maxdimen
+      \global\setbox\@cclv\vbox
+      spread\FN@vsize{\unvbox\@cclv\boxmaxdepth\maxdepth}}%
     \the\FN@output
     \FN@nest@iterate\FN@clearcache
   \or
@@ -2169,14 +2175,15 @@
 %    \begin{macrocode}
     \FN@restartoutput
     \penalty -13749
-%    \end{macrocode}
-% Now we want to gather additional material.  This is somewhat weird.
-% We first gather our material with a `normal' setting of topskip, and
-% then we'll have another go at the material using proper marks.  We
-% can't actually insert anything right now in order not to introduce a
-% premature breakpoint.
-%    \begin{macrocode}
+    \penalty\ifnum\outputpenalty<\@M \outputpenalty\else\z@\fi
   \or
+%    \end{macrocode}
+% Case 2: Now we want to gather additional material.  This is somewhat
+% weird.  We first gather our material with a `normal' setting of
+% topskip, and then we'll have another go at the material using proper
+% marks.  We can't actually insert anything right now in order not to
+% introduce a premature breakpoint.
+%    \begin{macrocode}
     \dimen@=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
     \FN@prepareoutput
     \global\topskip \normalbaselineskip
@@ -2185,7 +2192,8 @@
     \global\deadcycles\z@
   \else
 %    \end{macrocode}
-% Fake our output box into something looking like a cache box
+% This is case 3: Fake our output box into something looking like a
+% cache box and do the optimal split routine.
 %    \begin{macrocode}
     \edef\FN@masterid{\number\maxdimen}%
     \def\FN@masterslot{-1}%
@@ -2206,46 +2214,46 @@
     \let\@elt\relax
 %<trace> \if\foottrace8{\showboxdepth4\showboxbreadth100\showbox\@cclv}\fi
     \global\setbox\FN@savebox\box\voidb@x
-    \count@\vbadness
-    \vbadness\maxdimen
-    \global\setbox\@cclv\vbox spread\FN@vsize\bgroup
-      \unvbox\@cclv
-      \ifnum\lastpenalty>\z@
-        \unpenalty
-        \global\setbox\FN@tempbox\lastbox
-      \else
-        \global\setbox\FN@tempbox\box\voidb@x
-      \fi
-      \setbox\z@\lastbox
-      \ifvoid\z@
-        \ifvbox\FN@tempbox
-          \ifnum\outputpenalty<\@M
-            \global\setbox\FN@tempbox{\unvbox\FN@tempbox
-              \penalty\outputpenalty}%
-          \fi
-          \global\outputpenalty=\@M
+    {%
+      \vbadness\@M
+      \vfuzz\maxdimen
+      \global\setbox\@cclv\vbox spread\FN@vsize{%
+        \unvbox\@cclv
+        \ifnum\lastpenalty>\z@
+          \unpenalty
+          \global\setbox\FN@tempbox\lastbox
+        \else
+          \global\setbox\FN@tempbox\box\voidb@x
         \fi
-        \egroup \global\setbox\@cclv\box\voidb@x
-      \else
-        \MFL@removevboxes
-        \unvbox\z@
-        \let\FN@defaultpenalty\@M
-        \FN@getbreakpenalty
         \setbox\z@\lastbox
-        \ifcase
-          \ifvbox\FN@tempbox \@ne\fi
-          \ifvoid\z@ \else \@ne\fi \z@
-        \or
-          \global\setbox\FN@tempbox\vbox{\unvbox\z@
-            \unvbox\FN@tempbox
+        \ifvoid\z@
+          \ifvbox\FN@tempbox
             \ifnum\outputpenalty<\@M
-              \penalty\outputpenalty
-            \fi}%
-          \global\outputpenalty\FN@breakpenalty
+              \global\setbox\FN@tempbox{\unvbox\FN@tempbox
+                \penalty\outputpenalty}%
+            \fi
+            \global\outputpenalty=\@M
+          \fi
+        \else
+          \MFL@removevboxes
+          \unvbox\z@
+          \edef\FN@defaultpenalty{\number\@M}%
+          \FN@getbreakpenalty
+          \setbox\z@\lastbox
+          \global\setbox\FN@tempbox\vbox\bgroup\unvbox\z@
+            \unvbox\FN@tempbox
+            \ifnum\lastnodetype<\z@
+            \egroup\global\setbox\FN@tempbox\box\voidb@x            
+            \else
+              \ifnum\outputpenalty<\@M
+                \penalty\outputpenalty
+              \fi
+            \egroup
+            \global\outputpenalty\FN@breakpenalty
+          \fi
         \fi
-        \boxmaxdepth\maxdepth\egroup
-      \fi
-    \vbadness\count@
+        \boxmaxdepth\maxdepth}%
+    }%
     \setbox\z@\box\FN@tempbox
     \let\@elt\relax
 %    \end{macrocode}
@@ -2259,11 +2267,18 @@
 % general, we assume that if box~0 is nonvoid, we take the resulting
 % split.  Otherwise, if the page appears underfull, we pull in more
 % material.  If the page is not underfull, we can pass it to the
-% output routine.
+% output routine.  If box~0 is void, the break was chosen at the
+% ultimate end of the vertical list.  If it was not a forced break,
+% and if it is not an overful case already, we pull in more material
+% in order to avoid widows in the main text.
 %    \begin{macrocode}
     \dimen@=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
     \ifcase
-      \ifvoid\z@ \else\thr@@\fi
+      \ifvoid\z@ \ifnum\outputpenalty>-\@M
+                    \ifdim\dimen@<\z@ \else \@ne \fi
+                 \fi
+      \else \thr@@
+      \fi
       \ifdim\ht\@cclv<\normalbaselineskip \@ne\fi
       \ifdim\dimen@<\normalbaselineskip \tw@\fi \@ne
     \or
@@ -2274,10 +2289,11 @@
       \global\advance\FN@outervsize-\vsize
       \global\deadcycles\z@
     \or
+      \count@\outputpenalty
 %<trace> \if\foottrace8%
 %<trace>   \message{^^JOutput: config is \FN@config...}\fi
-    \setbox\tw@\vbox{%
-      \the\FN@output
+      \setbox\tw@\vbox{%
+        \the\FN@output
 %<trace> \if\foottrace8%
 %<trace>   \ifnum\lastnodetype=\m@ne
 %<trace>     \message{^^JOutput: end without carryover^^J}%
@@ -2287,15 +2303,15 @@
 %<trace>      \tracingonline=\@ne\showbox\tw@
 %<trace>   \fi
 %<trace> \fi
-    }%
-    \unvbox\tw@
-    \unvbox\z@
-    \FN@nest@iterate\FN@clearcache
-  \or
+      }%
+      \unvbox\tw@
+      \unvbox\z@
+      \FN@nest@iterate\FN@clearcache
+    \or
       \FN@restartoutput
       \penalty -13751
       \unvbox\z@
-  \fi
+    \fi
   \fi}
 %    \end{macrocode}
 % \end{macro}
@@ -2455,8 +2471,7 @@
         \count@\FN@defaultpenalty\relax
         \FN@getbreakpenaltyii
         \xdef\FN@tempinfo{\edef\noexpand\FN@breakpenalty{%
-            \number\ifnum\count@>-\@M \count@
-                   \else -\@M \fi}}}}%
+            \number\count@}}}}%
   \FN@tempinfo}
 
 \def\FN@getbreakpenaltyii{%
@@ -2505,7 +2520,7 @@
 %   the remaining space.
 %    \begin{macrocode}
 \def\FN@getbadness#1{%
-  {\hfuzz\maxdimen\hbadness\maxdimen\setbox\z@\hbox to\z@{\hskip-#1}}}
+  {\hfuzz\maxdimen\hbadness\@M\setbox\z@\hbox to\z@{\hskip-#1}}}
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@newlevel}
@@ -2527,11 +2542,11 @@
   \ifvoid\count@
 %<trace> \if\foottrace1\message{Page=\thepage #2 is empty, recursing with
 %<trace>   \the\FN@vsize^^J}%
-%<trace>   \message{Config=\FN@config^^J}\fi
+%<trace>   \message{Config=\unexpanded\expandafter{\FN@config}^^J}\fi
       #3\FN@mainsplitreturn
 %<trace> \if\foottrace1%
 %<trace>   \message{Page=\thepage #2 was empty, returning with \the\FN@vsize^^J}%
-%<trace>   \message{Config=\FN@config^^J}\fi
+%<trace>   \message{Config=\unexpanded\expandafter{\FN@config}^^J}\fi
   \else
 %<trace> \if\foottrace1\message{Entering #2 with \FN@badness}\fi
     {\def\FN@currentinsertion{#2}%
@@ -2540,7 +2555,7 @@
      \let\FN@entrybadness\FN@badness
      \splittopskip\csname FN@ht\number#2\endcsname\relax
      \splitmaxdepth\csname FN@dp\number#2\endcsname\relax
-     \vbadness=\maxdimen
+     \vbadness=\@M
      \vfuzz\maxdimen
      \let\@elt\relax
      \expandafter\FN@newleveli\expandafter}%
@@ -2559,7 +2574,11 @@
 % insertion, so we just subtract the whole insertion-related
 % content.  We'll add stuff into it when recursing.
 %    \begin{macrocode}
-    \dimen@\dimexpr\ht\count@+\dp\count@\relax
+    \dimen@\dimexpr\ht\count@
+      \ifnum\FN@currentinsertion=\FN@savebox
+      \else
+        +\dp\count@
+      \fi\relax
     \global\advance\FN@vsize\dimexpr \dimen@
       *\count\FN@currentinsertion/\@m\relax\relax
 %    \end{macrocode}
@@ -2595,7 +2614,11 @@
       \ifnum\lastpenalty=\z@
         \setbox\tw@\box\voidb@x
         \setbox\z@\lastbox
-        \FN@myvsize=\dimexpr\dimen@-\ht\z@-\dp\z@\relax
+        \FN@myvsize=\ifnum\lastnodetype<\z@
+          \z@
+        \else
+          \dimexpr\dimen@-\ht\z@-\dp\z@\relax
+        \fi
       \else
 %    \end{macrocode}
 % Now if the box has been split previously, we glue it back together
@@ -2637,7 +2660,7 @@
 %    \begin{macrocode}
       \ifnum\FN@currentinsertion=\FN@savebox
       \else
-        \def\FN@defaultpenalty{-\@M}%
+        \edef\FN@defaultpenalty{\number-\@M}%
         \edef\FN@masterslot{\number\dp\z@}%
         \edef\FN@masterid{\FN@slotget\FN@masterslot}%
       \fi
@@ -2661,7 +2684,7 @@
           *\@m/\count\FN@currentinsertion
           \unvbox\z@
           \ifnum\FN@defaultpenalty>-\@M
-            \penalty\FN@defaultpenalty\nointerlineskip
+            \penalty\FN@defaultpenalty\relax\nointerlineskip
             \vbox to\maxdimen{}%
           \fi}%
 %    \end{macrocode}
@@ -2694,7 +2717,7 @@
           *\@m/\count\FN@currentinsertion
           \unvbox\tw@\boxmaxdepth\splitmaxdepth}%
 %    \end{macrocode}
-% Ok, now rinse and repeat if we don't have reached the last footnote
+% Ok, now rinse and repeat if we haven't reached the last footnote
 % in the block.  Or, if we are in the main block and have not reached
 % the necessary minimum size.
 %    \begin{macrocode}
@@ -2847,6 +2870,9 @@
   \skip@\glueexpr\FN@vsize-\FN@myvsize
    *\count\FN@currentinsertion/\@m\relax
   \FN@getbreakpenalty
+  \ifnum\FN@breakpenalty<-\@M
+    \edef\FN@breakpenalty{\number-\@M}%
+  \fi
   \FN@getbadness\skip@
   \xdef\FN@badness{\number\numexpr\FN@badness+%
     \FN@breakpenalty+\@M}%
@@ -3085,9 +3111,14 @@
 % \cmd{\splitmaxdepth}, and we take this into account.
 %    \begin{macrocode}
   \fi
-  \ht4-\dp\tw@
-  \dp4\ifdim\dp\tw@<\splitmaxdepth \splitmaxdepth \else \dp\tw@ \fi
-  \advance\FN@myvsize\dimexpr \ht\tw@+\dp4\relax
+  \ifnum\FN@currentinsertion=\FN@savebox
+    \ht4-\ifdim\dp\tw@<\maxdepth \dp\tw@ \else \maxdepth\fi
+    \dp4\z@
+  \else
+    \ht4-\dp\tw@
+    \dp4\ifdim\dp\tw@<\splitmaxdepth \splitmaxdepth \else \dp\tw@ \fi
+  \fi
+  \advance\FN@myvsize\dimexpr \ht\tw@+\dp\tw@+\ht4+\dp4\relax
   \unvbox\tw@
   \nointerlineskip
   \box4 }
