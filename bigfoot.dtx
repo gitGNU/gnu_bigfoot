@@ -149,8 +149,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/08/13 17:20:51 $
-  \FN@next $Revision: 1.26 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/08/16 09:09:21 $
+  \FN@next $Revision: 1.27 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -2576,6 +2576,7 @@
 %    \begin{macrocode}
     \dimen@\dimexpr\ht\count@
       \ifnum\FN@currentinsertion=\FN@savebox
+        +\maxdepth
       \else
         +\dp\count@
       \fi\relax
@@ -2695,7 +2696,7 @@
 %    \begin{macrocode}
         \setbox\tw@\vsplit\z@ to%
           \dimexpr\FN@vsize*\@m/\count\FN@currentinsertion
-          -\FN@myvsize
+          -\FN@myvsize-\splitmaxdepth
         \relax
         \ifnum\FN@defaultpenalty>-\@M
           \setbox\z@\vbox\bgroup\unvbox\z@\setbox\z@\lastbox
@@ -3111,14 +3112,9 @@
 % \cmd{\splitmaxdepth}, and we take this into account.
 %    \begin{macrocode}
   \fi
-  \ifnum\FN@currentinsertion=\FN@savebox
-    \ht4-\ifdim\dp\tw@<\maxdepth \dp\tw@ \else \maxdepth\fi
-    \dp4\z@
-  \else
-    \ht4-\dp\tw@
-    \dp4\ifdim\dp\tw@<\splitmaxdepth \splitmaxdepth \else \dp\tw@ \fi
-  \fi
-  \advance\FN@myvsize\dimexpr \ht\tw@+\dp\tw@+\ht4+\dp4\relax
+  \ht4-\dp\tw@
+  \dp4\ifdim\dp\tw@<\splitmaxdepth \splitmaxdepth \else \dp\tw@ \fi
+  \advance\FN@myvsize\dimexpr \ht\tw@+\dp4\relax
   \unvbox\tw@
   \nointerlineskip
   \box4 }

@@ -1,3 +1,10 @@
+2006-08-16  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: include `\maxdepth' in current box estimate of main
+	vertical list.  Exclude current insertion depth from optimal split
+	target.  Remove special treatment of main vertical list from
+	`\FN@contribute@tw@', this was the wrong fix.
+
 2006-08-13  David Kastrup  <dak@gnu.org>
 
 	* README: Adapt to CTAN requirements and mope about them.
