@@ -1,3 +1,9 @@
+2006-08-17  David Kastrup  <dak@gnu.org>
+
+	* perpage.dtx: Try avoiding expansion at .aux readin time and use
+	`\protected@edef' for some things.  This tries dealing with
+	spanish.ldf.
+
 2006-08-16  David Kastrup  <dak@gnu.org>
 
 	* bigfoot.dtx: include `\maxdepth' in current box estimate of main

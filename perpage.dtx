@@ -17,7 +17,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{372}
+% \CheckSum{369}
 % \GetFileInfo{perpage.sty}
 % \date{\filedate}
 % \author{David Kastrup\thanks{\texttt{dak@gnu.org}}}
@@ -157,8 +157,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\next$#1: #2 #3${#2}
-\ProvidesPackage{perpage}[\next$Date: 2006/08/03 21:21:56 $
-  \next$Revision: 1.13 $ Reset/sort counters per page]
+\ProvidesPackage{perpage}[\next$Date: 2006/08/17 09:07:30 $
+  \next$Revision: 1.14 $ Reset/sort counters per page]
 %    \end{macrocode}
 % \begin{macro}{\AddAbsoluteCounter}
 % adds a counter with prefix |abs| to a given counter.  It typesets as
@@ -294,7 +294,8 @@
   \addtocounter{pp@a@#1}\m@ne
   \@addtoreset{pchk@#1}{#1}%
   \AtBeginDocument{\setcounter{pp@a@#1}\z@}%
-  \edef\next{\noexpand\AtEndDocument{\noexpand\setcounter{pp@a@#1}{%
+  \edef\next{\noexpand\AtEndDocument
+    {\noexpand\setcounter{pp@a@#1}{%
         \number\value{pp@a@#1}}}}\next}
 \@onlypreamble\pp@makeperpage
 %    \end{macrocode}
@@ -334,7 +335,7 @@
 \global\let\theperpage\@empty
 
 \def\pp@fetchctrii#1#2#3{\edef\pp@label{#1}%
-  \edef\pp@page{#2}%
+  \protected@edef\pp@page{#2}%
   \gdef\theperpage{#3}}
 %    \end{macrocode}
 % \end{macro}
@@ -394,6 +395,14 @@
   \afterassignment\endgroup\count@}
 %    \end{macrocode}
 % \end{macro}
+% \begin{macro}{\pp@labeldef}
+%   This is a helper macro.
+%    \begin{macrocode}
+\def\pp@labeldef#1#2#3#4#5{\@newl@bel{pp@r@#2}{#3}{{#1}{#4}{#5}}}
+%    \end{macrocode}
+%   
+% \end{macro}
+% 
 % \begin{macro}{\pp@pagectr}
 %   This is the workhorse for normal per page counters.  It is called
 %   whenever the |.aux| file is read in and establishes the
@@ -402,9 +411,8 @@
 %    \begin{macrocode}
 \def\pp@pagectr#1#2#3#4{\@ifundefined{c@pp@a@#1}{}{%
     \addtocounter{pp@a@#1}\@ne
-    \edef\next{\noexpand
-      \@newl@bel{pp@r@#1}{#2}{{\number\value{pp@a@#1}}{#3}%
-        {#4}}}\next}}
+    \expandafter\pp@labeldef\expandafter
+      {\number\value{pp@a@#1}}{#1}{#2}{#3}{#4}}}
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\c@schk@}
@@ -439,9 +447,8 @@
     \count@0\csname pp@g@#1@#3\endcsname
     \advance\count@\@ne
     \expandafter\xdef\csname pp@g@#1@#3\endcsname{\number\count@}%
-    \edef\next{\noexpand
-      \@newl@bel{pp@r@#1}{#2}{{\number\count@}{#3}%
-        {#4}}}\next}}
+    \expandafter\pp@labeldef\expandafter
+      {\number\count@}{#1}{#2}{#3}{#4}}}
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\c@spchk@}
@@ -470,9 +477,8 @@
       \setcounter{pp@a@#1}{\value{pp@r@#1}}%
     \fi
     \global\expandafter\let\csname pp@page@#1\endcsname\next
-    \edef\next{\noexpand
-      \@newl@bel{pp@r@#1}{#2}{{\number\value{pp@a@#1}}{#3}%
-        {#4}}}\next}}
+    \expandafter\pp@labeldef\expandafter
+      {\number\value{pp@a@#1}}{#1}{#2}{#3}{#4}}}
 %</style>
 %    \end{macrocode}
 % \end{macro}
