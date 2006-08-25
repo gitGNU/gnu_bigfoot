@@ -157,8 +157,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\next$#1: #2 #3${#2}
-\ProvidesPackage{perpage}[\next$Date: 2006/08/17 09:07:30 $
-  \next$Revision: 1.14 $ Reset/sort counters per page]
+\ProvidesPackage{perpage}[\next$Date: 2006/08/25 13:22:53 $
+  \next$Revision: 1.15 $ Reset/sort counters per page]
 %    \end{macrocode}
 % \begin{macro}{\AddAbsoluteCounter}
 % adds a counter with prefix |abs| to a given counter.  It typesets as
@@ -334,8 +334,8 @@
 
 \global\let\theperpage\@empty
 
-\def\pp@fetchctrii#1#2#3{\edef\pp@label{#1}%
-  \protected@edef\pp@page{#2}%
+\def\pp@fetchctrii#1#2#3{\def\pp@label{#1}%
+  \def\pp@page{#2}%
   \gdef\theperpage{#3}}
 %    \end{macrocode}
 % \end{macro}
@@ -400,7 +400,6 @@
 %    \begin{macrocode}
 \def\pp@labeldef#1#2#3#4#5{\@newl@bel{pp@r@#2}{#3}{{#1}{#4}{#5}}}
 %    \end{macrocode}
-%   
 % \end{macro}
 % 
 % \begin{macro}{\pp@pagectr}

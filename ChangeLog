@@ -1,3 +1,8 @@
+2006-08-25  David Kastrup  <dak@gnu.org>
+
+	* perpage.dtx: Use `\def' instead of `\edef' in order to avoid
+	problems.
+
 2006-08-17  David Kastrup  <dak@gnu.org>
 
 	* perpage.dtx: Try avoiding expansion at .aux readin time and use
