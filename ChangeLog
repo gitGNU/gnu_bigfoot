@@ -1,3 +1,7 @@
+2006-09-05  David Kastrup  <dak@gnu.org>
+
+	* perpage.dtx: Fix errors on first pass due to last change.
+
 2006-08-25  David Kastrup  <dak@gnu.org>
 
 	* perpage.dtx: Use `\def' instead of `\edef' in order to avoid

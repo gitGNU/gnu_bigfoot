@@ -17,7 +17,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{369}
+% \CheckSum{367}
 % \GetFileInfo{perpage.sty}
 % \date{\filedate}
 % \author{David Kastrup\thanks{\texttt{dak@gnu.org}}}
@@ -157,8 +157,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\next$#1: #2 #3${#2}
-\ProvidesPackage{perpage}[\next$Date: 2006/08/25 13:22:53 $
-  \next$Revision: 1.15 $ Reset/sort counters per page]
+\ProvidesPackage{perpage}[\next$Date: 2006/09/04 22:15:15 $
+  \next$Revision: 1.16 $ Reset/sort counters per page]
 %    \end{macrocode}
 % \begin{macro}{\AddAbsoluteCounter}
 % adds a counter with prefix |abs| to a given counter.  It typesets as
@@ -330,7 +330,7 @@
 %    \begin{macrocode}
 \def\pp@fetchctr#1{\expandafter\expandafter\expandafter\pp@fetchctrii
   \csname pp@r@#1@\number\value{pp@a@#1}\endcsname
-  \@empty\@empty}
+  {}{}}
 
 \global\let\theperpage\@empty
 
@@ -482,10 +482,9 @@
 %    \end{macrocode}
 % \end{macro}
 % 
-% \Finale{}
+% \Finale
 % \endinput
 % Local Variables: 
 % mode: doctex
 % TeX-master: "perpage.drv"
 % End: 
-
