@@ -1,3 +1,8 @@
+2007-03-18  David Kastrup  <dak@gnu.org>
+
+	* bigfoot.dtx: Add hooks `\FN@beforebreak' and `\FN@afterbreak',
+	add package options `robust' (default) and `fragile'.
+
 2006-09-05  David Kastrup  <dak@gnu.org>
 
 	* perpage.dtx: Fix errors on first pass due to last change.

@@ -1,7 +1,7 @@
 % \iffalse
 %%
 %% bigfoot is part of the bigfoot bundle for critical typesetting
-%% Copyright 2004, 05, 06  David Kastrup <dak@gnu.org>
+%% Copyright 2004, 05, 06, 07  David Kastrup <dak@gnu.org>
 %%
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{4186}
+% \CheckSum{4313}
 % \GetFileInfo{bigfoot.sty}
 % \title{The \texttt{bigfoot} package\\version \fileversion}
 % \date{\filedate}
@@ -40,7 +40,7 @@
 %       long ``u'', but that's just obvious in spoken Latin.}}
 %   that is higher on the page.
 % \item The last footnote in each apparatus may be broken to the next
-%   page\footnote{This will probably be interesting for footnotes
+%   page.\footnote{This will probably be interesting for footnotes
 %     that contain stuff like math equations\footnoteB+{Like
 %       \begin{equation}
 %         \label{eq:1}
@@ -64,7 +64,7 @@
 % \item Footnotes can be formatted in separate paragraphs, or be run
 %   into a single paragraph.  The choice is made per footnote
 %   apparatus, but can be overridden for single
-%   footnotes.\footnote{Footnotes containing material like display
+%   footnotes.\footnote{I.e., footnotes with display
 %     math\footnoteB{We had this already, right?} or list
 %     environments\footnoteB{And this looks familiar, too.} have to be
 %     done in vertical mode.}
@@ -149,8 +149,8 @@
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
 \def\FN@next $#1: #2 #3${#2}
-\ProvidesPackage{bigfoot}[\FN@next $Date: 2006/08/17 09:07:30 $
-  \FN@next $Revision: 1.28 $ makes footnotes work]%}
+\ProvidesPackage{bigfoot}[\FN@next $Date: 2007/03/18 21:58:33 $
+  \FN@next $Revision: 1.29 $ makes footnotes work]%}
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -164,6 +164,19 @@
     \else\@makefnmark\nobreak\fi}}
 
 \DeclareOption{ruled}{\PassOptionsToPackage{ruled}{manyfoot}}
+%    \end{macrocode}
+% The normal processing makes footnote text macros allow verbatim and
+% similar.  We call this `robust' processing though it is not totally
+% accurate.  This is the default.  There is also an option `fragile'
+% which will not allow this, but may be required for some definitions
+% of \cmd{\@makefntext}.  It turns out that most document classes work
+% with the `robust' option, but there might be some that fail, and
+% there might be some footnote-modifying packages that also can cause
+% failure.
+%    \begin{macrocode}
+\DeclareOption{robust}{\def\FN@makefncall{\FN@makefnrobust}}
+\DeclareOption{fragile}{\def\FN@makefncall{\FN@makefnfragile}}
+\ExecuteOptions{robust}
 %    \end{macrocode}
 % The |verbose| option talks about changed labels at the end of a
 % run.  It is for debugging instable configurations that fail to
@@ -604,6 +617,21 @@
     \iffalse}\fi}
 %    \end{macrocode}
 %
+% \subsubsection{Continuation marks}
+%
+% We add a possibility of adding continuation marks.  While the box is
+% assembled, immediately before the break, \cmd{\FN@beforebreak} gets
+% called, and \cmd{\FN@afterbreak} is called at the top of the
+% continuing box.
+%    \begin{macrocode}
+\ifx\FN@beforebreak\@undefined
+  \let\FN@beforebreak\@empty
+\fi
+\ifx\FN@afterbreak\@undefined
+  \let\FN@afterbreak\@empty
+\fi
+%    \end{macrocode}
+% 
 %
 %\subsubsection{The works}
 %
@@ -957,8 +985,8 @@
 %   calculation.
 %    \begin{macrocode}
 \def\FN@pseudobreak{%
-    {\parskip\z@skip\parfillskip\z@skip\parindent\z@\vadjust{}\par\noindent
-      \vadjust{\nobreak\vskip-\baselineskip}\nobreak\hfill\break}}      
+  {\parskip\z@skip\parfillskip\z@skip\parindent\z@\vadjust{}\par\noindent
+    \vadjust{\nobreak\vskip-\baselineskip}\nobreak\hfill\break}}      
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@pseudofillbreak}
@@ -1184,55 +1212,12 @@
       \else \FN@specific{#2}\@preparefnhtext \normalcolor
       \fi
 %    \end{macrocode}
-%   After preparation, we now do the big bad trick for making
-%   footnotes cooperate with \cmd{\verb} and other catcode changing
-%   things: we call \cmd{\@makefntext} with an argument of
-%   |\iffalse|.  This kills off its expansion right at the point
-%   where it would choose to place its argument.
+%   Ok, now we do the call to \cmd{\@makefntext} which may occur in
+%   one of several ways, depending on whether the `robust' or the
+%   `fragile' package option got used.
 %    \begin{macrocode}
-      \FN@specific{#2}\@makefntext
-      \iffalse\fi
-%    \end{macrocode}
-%   Record the footnote specific dimensions.  It is assumed that they
-%   don't change in the document, at least not before the footnote
-%   gets actually placed.
-%    \begin{macrocode}
-      \expandafter\xdef\csname FN@ht\number#2\endcsname{\the\footnotesep}%
-      \expandafter\xdef\csname FN@dp\number#2\endcsname{\the\dp\strutbox}%
-%    \end{macrocode}
-%   The footnote gets markers for identifying it and its starting block.
-%    \begin{macrocode}
-      \marks\FN@master{\FN@masterslot}%
-      \marks\FN@slave{\number\FN@id}%
-      \nobreak
-      \bgroup
-        \aftergroup\FN@commonending
-%    \end{macrocode}
-% \cmd{\FN@commonending} will intervene before any tokens that are
-% shifted in due to switching back the color stack.  Those will only
-% be executed once we completely relinquish control.
-%    \begin{macrocode}
-        \ifx\FN@boxtype\vbox
-           \rule\z@\footnotesep
-        \else
-          \ifx\FN@par\par\else
-            \let\FN@@par\par
-            \let\FN@@noindent\noindent
-            \let\FN@@indent\indent
-          \fi
-           \everyvbox\expandafter{\expandafter\everyvbox
-             \expandafter{\the\everyvbox}%
-             \let\par\FN@@par
-             \let\noindent\FN@@noindent
-             \let\indent\FN@@indent
-             \the\everyvbox}%
-           \let\par\FN@par
-           \let\noindent\FN@noindent
-           \let\indent\FN@indent
-        \fi
-        \afterassignment\ignorespaces
-        \expandafter\FN@fnotecommonii
-      \else
+      \expandafter \FN@makefncall
+  \else
 %    \end{macrocode}
 %   We still needed to cater for the error of badly anchored footnotes:
 %    \begin{macrocode}
@@ -1244,15 +1229,95 @@
 \fi}
 %    \end{macrocode}
 % \end{macro}
-% \begin{macro}{\FN@fnotecommonii}
-%   This just swallows the opening brace of the footnote text and then
-%   lets the footnote text progress.  The closing group will then
-%   trigger the processing via \cmd{\aftergroup}.
+% \begin{macro}{\FN@makefnstart}
+% This is called in the start of \cmd{\@makefntext}.
 %    \begin{macrocode}
-\def\FN@fnotecommonii#{\let\next}
+\def\FN@makefnstart{%
+%    \end{macrocode}
+%   Record the footnote specific dimensions.  It is assumed that they
+%   don't change in the document, at least not before the footnote
+%   gets actually placed.
+%    \begin{macrocode}
+  \expandafter\xdef\csname FN@ht\number\FN@masterinsert\endcsname
+    {\the\footnotesep}%
+  \expandafter\xdef\csname FN@dp\number\FN@masterinsert\endcsname
+    {\the\dp\strutbox}%
+  \expandafter\xdef\csname FN@wd\number\FN@masterinsert\endcsname
+    {\the\hsize}%
+%    \end{macrocode}
+%   The footnote gets markers for identifying it and its starting block.
+%    \begin{macrocode}
+  \marks\FN@master{\FN@masterslot}%
+  \marks\FN@slave{\number\FN@id}%
+  \nobreak
+%    \end{macrocode}
+% \cmd{\FN@commonending} will intervene before any tokens that are
+% shifted in due to switching back the color stack.  Those will only
+% be executed once we completely relinquish control.
+%    \begin{macrocode}
+  \ifx\FN@boxtype\vbox
+    \rule\z@\footnotesep
+  \else
+    \ifx\FN@par\par\else
+      \let\FN@@par\par
+      \let\FN@@noindent\noindent
+      \let\FN@@indent\indent
+    \fi
+     \everyvbox\expandafter{\expandafter\everyvbox
+       \expandafter{\the\everyvbox}%
+       \let\par\FN@@par
+       \let\noindent\FN@@noindent
+       \let\indent\FN@@indent
+       \the\everyvbox}%
+     \let\par\FN@par
+     \let\noindent\FN@noindent
+     \let\indent\FN@indent
+  \fi
+  \afterassignment\ignorespaces}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@makefnrobust}
+%   After preparation, we now do the big bad trick for making
+%   footnotes cooperate with \cmd{\verb} and other catcode changing
+%   things: we call \cmd{\@makefntext} with an argument of
+%   |\iffalse|.  This kills off its expansion right at the point
+%   where it would choose to place its argument.
+%
+%   Furthermore, this swallows the opening brace of the footnote text
+%   and then lets the footnote text progress.  The closing group will
+%   then trigger the processing via \cmd{\aftergroup}.
+%    \begin{macrocode}
+\def\FN@makefnrobust#{%
+  \FN@specific\FN@masterinsert\@makefntext
+  \iffalse\fi
+  \bgroup
+    \aftergroup\FN@robustending
+    \FN@makefnstart
+    \let\next}
 %    \end{macrocode}  
 % \end{macro}
-% % Ok, color handling is a nuisance, to say the least.  Split
+% \begin{macro}{\FN@robustending}
+%   Here we put in the missing part of \cmd{\@makefntext}.
+%    \begin{macrocode}
+\def\FN@robustending{%
+  \expandafter\expandafter\expandafter
+  \expandafter\expandafter\expandafter\expandafter
+  \iffalse  \FN@specific\FN@masterinsert\@makefntext\fi
+  \FN@commonending}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@makefnfragile}
+%   This is the escape route when the robust variant does not work.
+%   In that case, |\verb| and similar won't work in footnotes.
+%    \begin{macrocode}
+\long\def\FN@makefnfragile#1{%
+  \FN@specific\FN@masterinsert\@makefntext
+  {\FN@makefnstart#1\FN@commonending}}
+%    \end{macrocode}
+%   
+% \end{macro}
+% 
+% Ok, color handling is a nuisance, to say the least.  Split
 % footnotes need to close their color stack on the old page, and reopen
 % it on the new one.  So we record the color stack state at each time
 % it changes in a marks register.
@@ -1316,9 +1381,6 @@
 %   standard ones) happens to work.
 %    \begin{macrocode}
 \def\FN@commonending{%
-  \expandafter\expandafter\expandafter
-  \expandafter\expandafter\expandafter\expandafter
-  \iffalse  \FN@specific\FN@masterinsert\@makefntext\fi
   \@makefnendbox
   \ifx\FN@boxtype\vbox\@finalstrut\strutbox \else \unskip \fi
   \FN@colorstackfinish
@@ -1682,6 +1744,7 @@
 
 \expandafter\def\csname FN@ht\number\FN@savebox\endcsname{\topskip}%
 \expandafter\def\csname FN@dp\number\FN@savebox\endcsname{\maxdepth}
+\expandafter\def\csname FN@wd\number\FN@savebox\endcsname{\columnwidth}
 
 \def\FN@list{\MFL@list\@elt{}\footins}
 
@@ -2545,7 +2608,8 @@
 %<trace>   \message{Config=\unexpanded\expandafter{\FN@config}^^J}\fi
       #3\FN@mainsplitreturn
 %<trace> \if\foottrace1%
-%<trace>   \message{Page=\thepage #2 was empty, returning with \the\FN@vsize^^J}%
+%<trace>   \message{Page=\thepage #2 was empty,
+%<trace>     returning with \the\FN@vsize^^J}%
 %<trace>   \message{Config=\unexpanded\expandafter{\FN@config}^^J}\fi
   \else
 %<trace> \if\foottrace1\message{Entering #2 with \FN@badness}\fi
@@ -2555,6 +2619,7 @@
      \let\FN@entrybadness\FN@badness
      \splittopskip\csname FN@ht\number#2\endcsname\relax
      \splitmaxdepth\csname FN@dp\number#2\endcsname\relax
+     \hsize\csname FN@wd\number#2\endcsname\relax
      \vbadness=\@M
      \vfuzz\maxdimen
      \let\@elt\relax
@@ -2593,7 +2658,7 @@
 % meaning of boxes on the various levels are:\par\noindent
 % \begin{tabularx}{\linewidth}{ll@{:\hskip\tabcolsep}X}
 %   0&box0&where stuff gets collected as tentative material to be
-%   unboxed with |\FN@removevboxes| once the insertion gets readied
+%   unboxed with \cmd{\FN@removevboxes} once the insertion gets readied
 %   for shipout\\
 %   0&box2&the previous best split that was found\\\hline
 %   1&box0&the material that gets worked off, the tail of the split\\
@@ -2642,10 +2707,13 @@
 % these definitions here are made in \emph{inner} level, so they can't
 % make it outside as the result of the optimization.  If we drop out
 % of here without superceding them, something's completely rotten.
+% ^^A Fixme: Alpha pruning could be implemented by calling with
+% ^^A \FN@bestebadness already set at entry to the best badness at
+% ^^A the respective level.
 %    \begin{macrocode}
       \edef\FN@bestebadness{\number\maxdimen}%
       \let\FN@bestconfig\@undefined
-      \let\FN@bestvsize\z@skip
+      \def\FN@bestvsize{-\maxdimen}%
       \let\FN@splitcolors\@empty
 %    \end{macrocode}
 % Ok, first attempt.  One interesting feature is that we will never
@@ -2836,14 +2904,37 @@
 % No point in recursing if we can't beat the current best one.
 % However, if we find a forced break, this is considered perfect as
 % long as we are not overfull.  Note that recursion can only increase
-% the badness if we are still underfull here.
+% the badness if we are still underfull here, so there is no point in
+% using \cmd{\FN@badness} as the deciding factor of whether there may
+% be a point in recursing: the current ebadness (which is never less
+% than the badness) already is minimal.
 %    \begin{macrocode}
   \ifnum
-    \ifdim\skip@>\z@ \FN@ebadness \else \FN@badness \fi >\FN@bestebadness
+    \ifdim\skip@>\z@ \FN@ebadness \else \FN@badness \fi
+    >\FN@bestebadness\relax
+%<trace>    \if\foottrace1%
+%<trace>    \message{no recursion: \skip@=\the\skip@,
+%<trace>      \noexpand\FN@bestvsize=\FN@bestvsize,
+%<trace>      \noexpand\FN@ebadness=\FN@ebadness,
+%<trace>      \noexpand\FN@badness=\FN@badness,
+%<trace>      \noexpand\FN@bestebadness=\FN@bestebadness.}\fi
   \else
+%<trace>    \if\foottrace1%
+%<trace>    \message{before recursion: \skip@=\the\skip@,
+%<trace>      \noexpand\FN@bestvsize=\FN@bestvsize,
+%<trace>      \noexpand\FN@ebadness=\FN@ebadness,
+%<trace>      \noexpand\FN@badness=\FN@badness,
+%<trace>      \noexpand\FN@bestebadness=\FN@bestebadness.^^J
+%<trace>      recurse with \noexpand\FN@badness=\number\FN@entrybadness.}\fi
     \xdef\FN@badness{\number\FN@entrybadness}%
     \FN@vsizerecurse
     \FN@checkcurrent
+%<trace>    \if\foottrace1%
+%<trace>    \message{after recursion: \skip@=\the\skip@,
+%<trace>      \noexpand\FN@bestvsize=\FN@bestvsize,
+%<trace>      \noexpand\FN@ebadness=\FN@ebadness,
+%<trace>      \noexpand\FN@badness=\FN@badness,
+%<trace>      \noexpand\FN@bestebadness=\FN@bestebadness.}\fi
   \fi
 %    \end{macrocode}
 % Don't look further if we had a forced break or are overfull or are
@@ -2911,7 +3002,7 @@
     \ifnum\FN@bestebadness>\FN@ebadness \@ne\fi
     \ifnum\FN@bestebadness<\FN@ebadness \tw@\fi
     \ifdim\skip@<\z@
-      \ifdim\dimen@<\skip@ \@ne \else \tw@\fi
+      \ifdim\dimen@<\skip@ \@ne \fi \tw@
     \fi
     \ifdim\dimen@>\skip@ \@ne\fi \tw@}
 %    \end{macrocode}   
@@ -3017,7 +3108,7 @@
   \ifnum\FN@currentinsertion=\FN@savebox
   \else
     \setbox\z@\vbox{%
-      \dimen@\dp\z@
+      \prevdepth\dp\z@
       \unvbox\z@
       \ifvoid\FN@tempbox
       \else
@@ -3025,16 +3116,18 @@
           \marks\FN@master{\FN@masterslot}%
           \marks\FN@slave{\FN@slaveid}%
           \FN@coloraftersplit\FN@splitcolors
+          \FN@specific\FN@currentinsertion\FN@afterbreak
           \nobreak
           \unvbox\FN@tempbox}%
+        \FN@specific\FN@currentinsertion\FN@beforebreak
         \ht\FN@tempbox
         \dimexpr\ht\FN@tempbox+\dp\FN@tempbox-\FN@masterslot sp\relax
         \dp\FN@tempbox\FN@masterslot sp\relax
         \wd\FN@tempbox\maxdimen
       \fi
-      \ifdim\dimen@<\splitmaxdepth
-        \hrule\@height-\dimen@ \@width\z@
-         \@depth \splitmaxdepth \relax \fi}%
+    \ifdim\prevdepth<\splitmaxdepth
+       \hrule\@height-\prevdepth \@width\z@
+             \@depth \splitmaxdepth \relax \fi}%
     \ht\z@=\dimexpr\ht\z@+\dp\z@-\FN@masterslot sp\relax
     \dp\z@=\FN@masterslot sp
   \fi
