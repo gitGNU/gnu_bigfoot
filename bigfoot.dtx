@@ -1420,9 +1420,12 @@
 %   footnotes belong to this one.
 %    \begin{macrocode}
   \MFL@insert\FN@masterinsert{\nointerlineskip\box\z@}%
+  \ifdim\lastkern=\z@ \let\FN@next\@empty\else
+    \edef\FN@next{\kern\the\lastkern\relax}\unkern
+  \fi
   \marks\FN@slave{\number\FN@id}%
-  \MFL@endminipage
-  \FN@colorstackegroup
+  \expandafter\MFL@endminipage\expandafter\FN@colorstackegroup
+  \FN@next
 }
 %    \end{macrocode}
 % \end{macro}
