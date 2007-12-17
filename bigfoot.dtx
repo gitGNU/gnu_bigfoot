@@ -1491,7 +1491,7 @@
   \ifcase
     \ifvoid\z@\m@ne\fi \FN@config\z@
 %<trace>  \if\foottrace8\message{^^J\string\FN@retaindelayed:
-%<trace>     dropping box \FN@slotget{\number\dp\z@}}\fi
+%<trace>     dropping Id \FN@slotget{\number\dp\z@}}\fi
 %<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
 %<trace>     \tracingonline=\@ne\showbox\z@}\fi
     \ifnum\dp\z@=\count@\else \FN@freeslot{\number\dp\z@}\fi
@@ -1499,7 +1499,7 @@
     \FN@retaindelayed
   \or
 %<trace> \if\foottrace8\message{^^J\string\FN@retaindelayed:
-%<trace>    retaining box \FN@slotget{\number\dp\z@}}\fi
+%<trace>    retaining Id \FN@slotget{\number\dp\z@}}\fi
 %<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
 %<trace>     \tracingonline=\@ne\showbox\z@}\fi
     {\FN@retaindelayed \nointerlineskip \box\z@}%
@@ -3320,13 +3320,13 @@
   \ifcase
     \ifvoid\z@\m@ne\fi \FN@config\z@
 %<trace>  \if\foottrace8\message{^^J\string\FN@retainkept:
-%<trace>     retaining box \FN@slotget{\number\dp\z@}}\fi
+%<trace>     retaining Id \FN@slotget{\number\dp\z@}}\fi
 %<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
 %<trace>     \tracingonline=\@ne\showbox\z@}\fi
     {\FN@retainkept \nointerlineskip \box\z@}%
   \or
 %<trace>  \if\foottrace8\message{^^J\string\FN@retainkept:
-%<trace>     dropping box \FN@slotget{\number\dp\z@}}\fi
+%<trace>     dropping Id \FN@slotget{\number\dp\z@}}\fi
 %<trace>  \if\foottrace{16}{\showboxdepth4 \showboxbreadth400
 %<trace>     \tracingonline=\@ne\showbox\z@}\fi
     \FN@retainkept
