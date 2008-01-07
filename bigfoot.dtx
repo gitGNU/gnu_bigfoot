@@ -2259,7 +2259,15 @@
   \else
 %    \end{macrocode}
 % This is case 3: Fake our output box into something looking like a
-% cache box and do the optimal split routine.
+% cache box and do the optimal split routine.  The output cache box
+% has a few deficiencies: its inner box is \emph{not} depth-extended
+% to some default measurement.  That means that where page size
+% calculations are involved, one needs to \emph{disregard} its actual
+% depth and instead use \cmd{\maxdepth}.  This is somewhat awkward and
+% prone to problems.  One alternative might be to mark the box as
+% split, extend its depth in the split part and let it be followed by
+% nothing as lower part of the split.  But we still would need to
+% account for the missing depth at the end.
 %    \begin{macrocode}
     \edef\FN@masterid{\number\maxdimen}%
     \def\FN@masterslot{-1}%
@@ -2335,7 +2343,7 @@
 % material.  If the page is not underfull, we can pass it to the
 % output routine.  If box~0 is void, the break was chosen at the
 % ultimate end of the vertical list.  If it was not a forced break,
-% and if it is not an overful case already, we pull in more material
+% and if it is not an overfull case already, we pull in more material
 % in order to avoid widows in the main text.
 %    \begin{macrocode}
     \dimen@=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
@@ -2697,7 +2705,10 @@
       \else
 %    \end{macrocode}
 % Now if the box has been split previously, we glue it back together
-% again.
+% again.  Since the lower part of the split has been \emph{subtracted}
+% from the total in \cmd{\dimen@}, we need to put it back into the
+% equation here.  \cmd{\dimen@} contains the size of the box after
+% padding split material has been added.
 %    \begin{macrocode}
         \unpenalty
         \setbox\tw@\lastbox
@@ -2965,7 +2976,9 @@
   \fi}
 % \end{macro}
 % \begin{macro}{\FN@checkcurrent}
-%   Check out the badness of the current configuration.
+%   Check out the badness of the current configuration.  The last box
+%   on the list is the material constituting the discardable material
+%   after a split.
 %    \begin{macrocode}
 \def\FN@checkcurrent{%
   \skip@\glueexpr\FN@vsize-\FN@myvsize
@@ -3148,7 +3161,10 @@
   \ifvoid\FN@tempbox \egroup
 %    \end{macrocode}
 % If not, we add the carried-over box to the list, flag it with a
-% \cmd{\nobreak}, and subtract its size from the finished box.
+% \cmd{\nobreak}, and subtract its size from the finished box.  Please
+% note that the \cmd{\expandafter} chain will expand just
+% |\cmd\dimen@|, but everything following it will be evaluated only
+% after \cmd{\egroup}, thus using the new height of the box.
 %    \begin{macrocode}
   \else
     \dimen@-\dimexpr\ht\FN@tempbox+\dp\FN@tempbox\relax
