@@ -2270,7 +2270,7 @@
 %<trace> \ifvoid\FN@savebox \else \PackageError{bigfoot}{\FN@savebox
 %<trace>   \space should be void!}{}\fi
     \global\setbox\FN@savebox\vbox{}%
-    \gdef\FN@badness{0}%
+    \gdef\FN@penalties{0}%
     \edef\FN@defaultpenalty{\ifnum\outputpenalty<\@M
         \number\outputpenalty
       \else
@@ -2594,14 +2594,20 @@
 %   footnote level, recursing if necessary.  The level list is
 %   delimited with \cmd{\FN@mainsplitreturn}.  The whole thing is
 %   looped through while the splits are being optimized.  While
-%   recursing, \cmd{\FN@badness} contains the badness of the current
-%   split configuration: a penalty of $10000$ for any split, plus the
-%   penalty at the split points.  \cmd{\FN@ebadness} is the same, but
-%   also counting in the stretch badness for one particular
-%   configuration.  Ebadness does not make sense to evaluate more than
-%   temporarily: it is not passed through the levels.  Since
-%   \cmd{\FN@badness} is globally tampered with, its value at entry is
-%   saved in \cmd{\FN@entrybadness}.
+%   recursing, \cmd{\FN@penalties} contains the accumulated penalities
+%   of the current split configuration: a penalty of $10000$ for any
+%   split (except the main list), plus the penalty at the split
+%   points.  \cmd{\FN@ebadness} is the same, but also counting in the
+%   stretch badness for one particular configuration.  Ebadness does
+%   not make sense to evaluate more than temporarily: it is not passed
+%   through the levels.  Since \cmd{\FN@penalties} is globally
+%   tampered with, its value at entry is saved in
+%   \cmd{\FN@entrypenalties}.  Whenever we recurse or return,
+%   \cmd{\FN@vsize} contains the full information about the available
+%   space on the page, even though locally we use \cmd{\FN@myvsize}, a
+%   local value, to keep track of the locally reserved space.  The
+%   only time when we need to save \cmd{\FN@myvsize} should be when we
+%   temporarily leave boxes in order to save the current configuration.
 %    \begin{macrocode}
 \def\FN@newlevel#1#2#3\FN@mainsplitreturn{%
   \count@\FN@cache#2%
@@ -2615,11 +2621,11 @@
 %<trace>     returning with \the\FN@vsize^^J}%
 %<trace>   \message{Config=\unexpanded\expandafter{\FN@config}^^J}\fi
   \else
-%<trace> \if\foottrace1\message{Entering #2 with \FN@badness}\fi
+%<trace> \if\foottrace1\message{Entering #2 with \FN@penalties}\fi
     {\def\FN@currentinsertion{#2}%
      \def\FN@currentrecursion{#3}%
      \let\FN@entryconfig\FN@config
-     \let\FN@entrybadness\FN@badness
+     \let\FN@entrypenalties\FN@penalties
      \splittopskip\csname FN@ht\number#2\endcsname\relax
      \splitmaxdepth\csname FN@dp\number#2\endcsname\relax
      \hsize\csname FN@wd\number#2\endcsname\relax
@@ -2627,7 +2633,7 @@
      \vfuzz\maxdimen
      \let\@elt\relax
      \expandafter\FN@newleveli\expandafter}%
-%<trace> \if\foottrace1\message{Exiting #2 with \FN@badness}\fi
+%<trace> \if\foottrace1\message{Exiting #2 with \FN@penalties}\fi
   \fi}
 %    \end{macrocode}
 % \end{macro}
@@ -2711,10 +2717,10 @@
 % make it outside as the result of the optimization.  If we drop out
 % of here without superceding them, something's completely rotten.
 % ^^A Fixme: Alpha pruning could be implemented by calling with
-% ^^A \FN@bestebadness already set at entry to the best badness at
+% ^^A \FN@bestcost already set at entry to the best badness at
 % ^^A the respective level.
 %    \begin{macrocode}
-      \edef\FN@bestebadness{\number\maxdimen}%
+      \edef\FN@bestcost{\number\maxdimen}%
       \let\FN@bestconfig\@undefined
       \def\FN@bestvsize{-\maxdimen}%
       \let\FN@splitcolors\@empty
@@ -2901,43 +2907,43 @@
 % the best previous one.  Also we calculate the badness of the current
 % situation.
 %    \begin{macrocode}
-  \xdef\FN@badness{\number\FN@entrybadness}%
+  \xdef\FN@penalties{\number\FN@entrypenalties}%
   \FN@checkcurrent
 %    \end{macrocode}
 % No point in recursing if we can't beat the current best one.
 % However, if we find a forced break, this is considered perfect as
 % long as we are not overfull.  Note that recursion can only increase
 % the badness if we are still underfull here, so there is no point in
-% using \cmd{\FN@badness} as the deciding factor of whether there may
+% using \cmd{\FN@penalties} as the deciding factor of whether there may
 % be a point in recursing: the current ebadness (which is never less
 % than the badness) already is minimal.
 %    \begin{macrocode}
   \ifnum
-    \ifdim\skip@>\z@ \FN@ebadness \else \FN@badness \fi
-    >\FN@bestebadness\relax
+    \ifdim\skip@>\z@ \FN@ebadness \else \FN@penalties \fi
+    >\FN@bestcost\relax
 %<trace>    \if\foottrace1%
 %<trace>    \message{no recursion: \skip@=\the\skip@,
 %<trace>      \noexpand\FN@bestvsize=\FN@bestvsize,
 %<trace>      \noexpand\FN@ebadness=\FN@ebadness,
-%<trace>      \noexpand\FN@badness=\FN@badness,
-%<trace>      \noexpand\FN@bestebadness=\FN@bestebadness.}\fi
+%<trace>      \noexpand\FN@penalties=\FN@penalties,
+%<trace>      \noexpand\FN@bestcost=\FN@bestcost.}\fi
   \else
 %<trace>    \if\foottrace1%
 %<trace>    \message{before recursion: \skip@=\the\skip@,
 %<trace>      \noexpand\FN@bestvsize=\FN@bestvsize,
 %<trace>      \noexpand\FN@ebadness=\FN@ebadness,
-%<trace>      \noexpand\FN@badness=\FN@badness,
-%<trace>      \noexpand\FN@bestebadness=\FN@bestebadness.^^J
-%<trace>      recurse with \noexpand\FN@badness=\number\FN@entrybadness.}\fi
-    \xdef\FN@badness{\number\FN@entrybadness}%
+%<trace>      \noexpand\FN@penalties=\FN@penalties,
+%<trace>      \noexpand\FN@bestcost=\FN@bestcost.^^J
+%<trace>      recurse with \noexpand\FN@penalties=\number\FN@entrypenalties.}\fi
+    \xdef\FN@penalties{\number\FN@entrypenalties}%
     \FN@vsizerecurse
     \FN@checkcurrent
 %<trace>    \if\foottrace1%
 %<trace>    \message{after recursion: \skip@=\the\skip@,
 %<trace>      \noexpand\FN@bestvsize=\FN@bestvsize,
 %<trace>      \noexpand\FN@ebadness=\FN@ebadness,
-%<trace>      \noexpand\FN@badness=\FN@badness,
-%<trace>      \noexpand\FN@bestebadness=\FN@bestebadness.}\fi
+%<trace>      \noexpand\FN@penalties=\FN@penalties,
+%<trace>      \noexpand\FN@bestcost=\FN@bestcost.}\fi
   \fi
 %    \end{macrocode}
 % Don't look further if we had a forced break or are overfull or are
@@ -2969,7 +2975,7 @@
     \edef\FN@breakpenalty{\number-\@M}%
   \fi
   \FN@getbadness\skip@
-  \xdef\FN@badness{\number\numexpr\FN@badness+%
+  \xdef\FN@penalties{\number\numexpr\FN@penalties+%
     \FN@breakpenalty+\@M}%
   \ifnum\badness>\@M
     \edef\FN@ebadness{\number\numexpr\maxdimen-\@ne}%
@@ -2978,7 +2984,7 @@
       \edef\FN@ebadness{\number\numexpr\maxdimen-\tw@}%
     \else
       \edef\FN@ebadness{\number\numexpr
-        \FN@badness+\badness}%
+        \FN@penalties+\badness}%
     \fi
   \fi
   \dimen@\glueexpr\FN@bestvsize\relax
@@ -3002,8 +3008,8 @@
 % So we check if it is at least better than the last one, in which
 % case we need to replace the previous best.
 %    \begin{macrocode}
-    \ifnum\FN@bestebadness>\FN@ebadness \@ne\fi
-    \ifnum\FN@bestebadness<\FN@ebadness \tw@\fi
+    \ifnum\FN@bestcost>\FN@ebadness \@ne\fi
+    \ifnum\FN@bestcost<\FN@ebadness \tw@\fi
     \ifdim\skip@<\z@
       \ifdim\dimen@<\skip@ \@ne \fi \tw@
     \fi
@@ -3025,8 +3031,8 @@
     \FN@checkforbest
   \or
     \xdef\FN@tempinfo{\def\noexpand\FN@bestvsize{\the\skip@}%
-      \def\noexpand\FN@bestebadness{\FN@ebadness}%
-      \def\noexpand\FN@bestbadness{\number\FN@badness}%
+      \def\noexpand\FN@bestcost{\FN@ebadness}%
+      \def\noexpand\FN@bestbadness{\number\FN@penalties}%
       \def\noexpand\FN@bestconfig{\FN@config}%
       \def\noexpand\FN@bestslaveid{\FN@slaveid}%
       \def\noexpand\FN@bestsplitcolors{\FN@splitcolors}%
@@ -3071,8 +3077,8 @@
   \ifcase\FN@checkforbest
   \or
     \xdef\FN@tempinfo{\def\noexpand\FN@bestvsize{\the\skip@}%
-      \def\noexpand\FN@bestebadness{\FN@ebadness}%
-      \def\noexpand\FN@bestbadness{\number\FN@badness}%
+      \def\noexpand\FN@bestcost{\FN@ebadness}%
+      \def\noexpand\FN@bestbadness{\number\FN@penalties}%
       \def\noexpand\FN@bestconfig{\FN@config}%
       \def\noexpand\FN@bestslaveid{\FN@slaveid}%
       \def\noexpand\FN@bestsplitcolors{\FN@splitcolors}%
@@ -3095,7 +3101,7 @@
   \or
     \global\let\FN@config\FN@bestconfig
     \global\FN@vsize\FN@bestvsize
-    \global\let\FN@badness\FN@bestbadness
+    \global\let\FN@penalties\FN@bestbadness
     \egroup
 %    \end{macrocode}
 % Restore the saved configuration.
