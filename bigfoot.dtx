@@ -2542,10 +2542,12 @@
     \nointerlineskip\copy\z@
     \setbox\z@
       \vbox{\unvbox\z@
-        \count@\FN@defaultpenalty\relax
+        \count@\@M
         \FN@getbreakpenaltyii
         \xdef\FN@tempinfo{\edef\noexpand\FN@breakpenalty{%
-            \number\count@}}}}%
+            \number\ifnum\count@<\@M \count@ \else
+            \FN@defaultpenalty\fi
+          }}}}%
   \FN@tempinfo}
 
 \def\FN@getbreakpenaltyii{%
