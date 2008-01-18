@@ -2027,33 +2027,25 @@
     \fi
     \global\FN@outervsize\ht\@cclv
     \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
-    \global\advance\FN@outervsize-\ht\@cclv\relax
     \global\let\FN@vsadjustlist\@empty
     \FN@normaloutput
 %    \end{macrocode}
-% \cmd{\FN@outervsize} now contains the amount of stretch that was put
-% into the output box in order to reach the goal size.  So it is the
-% space we still have left available to fill given the current
-% \cmd{\vsize} and contents of insertions.  Note that this can be
-% negative if shrinkability has been involved in getting at the value.
+% \cmd{\FN@outervsize} now contains the value of \cmd{\pagegoal} at
+% the time of output.  It should be \cmd{\vsize} adjusted by the
+% natural size of insertions.
 %    \begin{macrocode}
   \else
 %    \end{macrocode}
 % We now are in the situation that we already have collected material
-% previously.  \cmd{\FN@outervsize} contains the overshoot according
-% to the difference of demanded and achieved space again.  It remains
-% unchanged if we have inserted a special penalty ourselves: in this
-% case no page material has possibly been added.  However, we can't be
-% sure that adding a special penalty does not take more than one
-% output routine call before delivery.  For that reason, we don't rely
-% on special outputs being special and always subtract any
-% additionally demanded \cmd{\vspace} from \cmd{\FN@outervsize} before
-% calling a special output, so that we can afterwards compensate for
-% it.
+% previously.  We can't be sure that adding a special penalty does not
+% take more than one output routine call before delivery.  For that
+% reason, we don't rely on special outputs being special and always
+% subtract any additionally demanded \cmd{\vspace} from
+% \cmd{\FN@outervsize} before calling a special output, so that we can
+% afterwards compensate for it.
 %    \begin{macrocode}
-    \dimen@\ht\@cclv
+    \global\advance\FN@outervsize\ht\@cclv
     \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
-    \global\advance\FN@outervsize\dimexpr\dimen@-\ht\@cclv\relax
 %    \end{macrocode}
 % Now we invalidate the cache boxes for all insertions that had
 % changed due to the recent additions to the page.
@@ -2175,8 +2167,8 @@
 % size was taken from \cmd{\pagegoal}, and we reconstitute it in this
 % manner.
 %    \begin{macrocode}
-  \FN@nest@iterate{\FN@insertouterspace\global\FN@vsize\dimexpr\z@}%
-  \global\advance\FN@vsize\FN@outervsize\relax
+  \FN@nest@iterate{\FN@insertouterspace\global\FN@vsize\dimexpr
+    \FN@outervsize-\ht\@cclv}%
 %    \end{macrocode}
 % Now we sort the inserts and regenerate the cache.
 %    \begin{macrocode}
