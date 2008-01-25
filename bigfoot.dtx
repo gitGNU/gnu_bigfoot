@@ -2013,7 +2013,7 @@
         gather all floating insertions in a single pass.^^J%
         Complain to the author if you consider this a bug}%
     \fi
-    \global\advance\FN@outervsize\dimexpr\ht\@cclv-\vsize\relax
+    \global\advance\FN@outervsize\dimexpr\ht\@cclv-\vsize
     \global\setbox\@cclv\box\voidb@x
   \else
 %    \end{macrocode}
@@ -2025,7 +2025,8 @@
     \ifvoid\@holdpg
       \FN@sweeptopmarks
     \fi
-    \global\FN@outervsize\ht\@cclv
+    \FN@nest@iterate{\FN@insertouterspace\global\FN@outervsize
+      \dimexpr\ht\@cclv}%
     \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
     \global\let\FN@vsadjustlist\@empty
 %    \end{macrocode}
@@ -2044,7 +2045,8 @@
 % \cmd{\FN@outervsize} before calling a special output, so that we can
 % afterwards compensate for it.
 %    \begin{macrocode}
-    \global\advance\FN@outervsize\ht\@cclv
+    \FN@nest@iterate{\FN@insertouterspace\global\advance\FN@outervsize
+      \dimexpr\ht\@cclv}%
     \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
 %    \end{macrocode}
 % Now we invalidate the cache boxes for all insertions that had
@@ -2167,8 +2169,7 @@
 % size was taken from \cmd{\pagegoal}, and we reconstitute it in this
 % manner.
 %    \begin{macrocode}
-  \FN@nest@iterate{\FN@insertouterspace\global\FN@vsize\dimexpr
-    \FN@outervsize-\ht\@cclv}%
+  \global\FN@vsize\dimexpr\FN@outervsize-\ht\@cclv\relax\relax
 %    \end{macrocode}
 % Now we sort the inserts and regenerate the cache.
 %    \begin{macrocode}
