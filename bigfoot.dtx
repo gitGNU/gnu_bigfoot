@@ -2137,7 +2137,7 @@
         \unvbox\z@
         \global\setbox\@cclv\vbox{\break\unvbox\@cclv}%
         {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}%
-        \penalty\ifnum\outputpenalty<\@M \outputpenalty \else \z@ \fi
+        \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
         \pagediscards
         \unvbox\@cclv
         \boxmaxdepth\maxdepth}%
