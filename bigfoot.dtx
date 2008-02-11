@@ -2065,7 +2065,8 @@
     \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
 %    \end{macrocode}
 % Now we invalidate the cache boxes for all insertions that had
-% changed due to the recent additions to the page.
+% changed due to the recent additions to the page (this does
+% \emph{not} affect \cmd{\FN@vsize}).
 %    \begin{macrocode}
     \FN@nest@iterate\FN@maybeinvalidatecache
 %    \end{macrocode}
@@ -2720,6 +2721,7 @@
 % equation here.  \cmd{\dimen@} contains the size of the box after
 % padding split material has been added.
 %    \begin{macrocode}
+%<trace> \if\foottrace1\message{Regluing box 2}\fi
         \unpenalty
         \setbox\tw@\lastbox
         \setbox\z@\lastbox
@@ -2753,9 +2755,12 @@
 % bother about contributing too much.  What we put in the box here
 % can stay.
 %
-% First we split to the remaining size.  After having done so, we
-% continue splitting until we get the necessary mark of the last
-% footnote into our grasp: we can't split before that.
+% First we split to the remaining size.  Since we still have all
+% subordinate footnotes considered fully, we need at least this split
+% size (in case of a configuration change, we will need more).  After
+% having done the initial split, we continue splitting until we get
+% the necessary mark of the last footnote into our grasp: we can't
+% split before that.
 %    \begin{macrocode}
       \ifnum\FN@currentinsertion=\FN@savebox
       \else
@@ -3310,6 +3315,7 @@
 %   \cmd{\FN@reconfig}.
 %    \begin{macrocode}
 \def\FN@rejoin#1#2{{%
+%<trace> \if\foottrace1\message{^^JRejoining #2}\fi
   \count@\FN@cache#2%
   \ifvoid\count@\else
     \global\advance\FN@vsize\dimexpr
