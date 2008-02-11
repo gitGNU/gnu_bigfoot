@@ -1496,7 +1496,7 @@
 %<trace>     \tracingonline=\@ne\showbox\z@}\fi
     \ifnum\dp\z@=\count@\else \FN@freeslot{\number\dp\z@}\fi
 %<trace> \ifnum\dp\z@<\@ne \errmessage{Unidentified box}\fi
-    \FN@retaindelayed
+    \expandafter\FN@retaindelayed
   \or
 %<trace> \if\foottrace8\message{^^J\string\FN@retaindelayed:
 %<trace>    retaining Id \FN@slotget{\number\dp\z@}}\fi
