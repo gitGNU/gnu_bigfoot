@@ -2047,7 +2047,8 @@
 %    \end{macrocode}
 % \cmd{\FN@outervsize} now contains the value of \cmd{\pagegoal} at
 % the time of output.  It should be \cmd{\vsize} adjusted by the
-% natural size of insertions.
+% natural size of insertions.  Note that \cmd{\FN@normaloutput} is not
+% required to return with a sensible value of \cmd{\outputpenalty}.
 %    \begin{macrocode}
     \FN@normaloutput
   \else
@@ -2133,11 +2134,24 @@
 % Splitting again achieves that.  If the current page was empty except
 % for insertions, this means that we gain a new breakpoint.  But
 % insertions with discardable material before them would be unusual.
+%
+% The only exception to this may happen if the current page contained
+% only insertions: in this case \TeX\ has made a page break before the
+% actually inserted \cmd{\topskip} glue (which will then arrive one
+% page later).
+%
+% Note that the pagediscards contain material corresponding to the
+% last breakpoint chosen, so they will either start with a penalty
+% of~10000 (which is what an actual outputpenalty gets replaced with)
+% or will start with discardable material.  When we are working with
+% multiple passes and have to suspect a replaced outputpenalty, we add
+% the original outputpenalty (or 0, if there was none) back to the
+% list (in which case it ends up in the pagediscards) or the savebox,
+% so we don't need to add it here.
 %    \begin{macrocode}
         \unvbox\z@
         \global\setbox\@cclv\vbox{\break\unvbox\@cclv}%
-        {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}%
-        \ifnum\outputpenalty<\@M \penalty\outputpenalty\fi
+        {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}% 
         \pagediscards
         \unvbox\@cclv
         \boxmaxdepth\maxdepth}%
@@ -2145,7 +2159,12 @@
 %    \end{macrocode}
 % Ok, now if \cmd{\topskip} is actually \emph{positive}, we have been
 % collecting material tentatively without having proper marks.  We
-% then need to fill in the marks into the list and try again.
+% then need to fill in the marks into the list and try again.  Note
+% that we are not reinserting anything in order to compensate for
+% \cmd{\outputpenalty} being replaced by a nobreak: this is the job of
+% \cmd{\FN@normaloutput} when it decides to place material back on the
+% page.  That is: when code is written that will make use of
+% pagediscards, it has to cater for their proper structure.
 %    \begin{macrocode}
       \ifdim\dimen@>\z@
 %<trace>  \if\foottrace8
@@ -2246,7 +2265,10 @@
     \FN@nest@iterate\FN@clearcache
   \or
 %    \end{macrocode}
-% Case 1: We just pull in remaining insertions and are done.
+% Case 1: We just pull in remaining insertions and are done.  Note
+% that the special penalty here will get turned into an explicit
+% nobreak.  So if we have no record of an actual outputpenalty, we
+% need to insert an artificial penalty of 0 here.
 %    \begin{macrocode}
     \FN@restartoutput
     \penalty -13749
@@ -2280,8 +2302,7 @@
 %    \begin{macrocode}
     \edef\FN@masterid{\number\maxdimen}%
     \def\FN@masterslot{-1}%
-    \global\setbox\@cclv\vbox{%
-      \box\@cclv}%
+    \global\setbox\@cclv\vbox{\box\@cclv}%
     \xdef\FN@config{\noexpand\@elt{\number0\botmarks\FN@slave}%
       {\number\maxdimen}}%
 %<trace> \ifvoid\FN@savebox \else \PackageError{bigfoot}{\FN@savebox
@@ -2309,6 +2330,16 @@
           \global\setbox\FN@tempbox\box\voidb@x
         \fi
         \setbox\z@\lastbox
+%    \end{macrocode}
+% Now if a split has been done, |\box\FN@tempbox| contains the lower
+% part of the split.  In either case, |\box\z@| contains the upper
+% part of the split (in a prepared form with the splitdiscards in a
+% box of their own).  This may be void if there is no main text but
+% only footnotes.  If we have carryover material, we add the current
+% outputpenalty there and set outputpenalty to a value indicating that
+% we have no outputpenalty to add at the end of the current list
+% (Fixme: other places might interpret this as a zero penalty?).
+%    \begin{macrocode}
         \ifvoid\z@
           \ifvbox\FN@tempbox
             \ifnum\outputpenalty<\@M
@@ -2318,6 +2349,11 @@
             \global\outputpenalty=\@M
           \fi
         \else
+%    \end{macrocode}
+% Ok, we have material on this page.  We unpack it and fish out the
+% break penalty from the last box.  After checking it, put it in
+% box~0.
+%    \begin{macrocode}
           \MFL@removevboxes
           \unvbox\z@
           \edef\FN@defaultpenalty{\number\@M}%
