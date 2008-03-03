@@ -807,28 +807,13 @@
 % When |\parshape| is active, |\hangindent| is ignored.
 % \end{macro}
 %    \begin{macrocode}
-\providecommand\MFL@applyhook#1{\csname MFL@hook\string#1\endcsname}
-
 \def\@makefnstartbox{%
-  \let\FN@bfnobreak=\nobreak
   \reset@font\footnotesize
   \hsize\MFL@columnwidth \@parboxrestore
   \interlinepenalty\FN@specific\FN@masterinsert\interfootnotelinepenalty
   \widowpenalty\FN@specific\FN@masterinsert\footnotewidowpenalty
   \clubpenalty\FN@specific\FN@masterinsert\footnoteclubpenalty
-  \advance\linepenalty500\relax
-  \expandafter\MFL@applyhook\expandafter{\FN@masterinsert}%
-  \ifnum\lastpenalty=\z@
-    \ifdim\lastkern=\z@
-    \else
-      \edef\FN@bfnobreak{\kern\the\lastkern}%
-      \unkern
-    \fi
-  \else
-    \edef\FN@bfnobreak{\penalty\the\lastpenalty}%
-    \unpenalty
-  \fi
-}
+  \advance\linepenalty500\relax}
 
 \def\@makefnendbox{%
   \widowpenalty\FN@specific\FN@masterinsert\finalfootnotewidowpenalty}
@@ -854,7 +839,7 @@
       \clubpenalties\thr@@\@MM\clubpenalty\z@
       \let\@thefnmark\@empty
       \FN@specific\FN@masterinsert\@makefntext{\rule\z@\footnotesep
-        \FN@bfnobreak
+        \nobreak
         #1\@finalstrut\strutbox
       \@makefnendbox}}}
 \fi
