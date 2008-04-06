@@ -1,7 +1,7 @@
 % \iffalse
 %%
 %% perpage is part of the bigfoot bundle for critical typesetting
-%% Copyright 2002, 03, 04, 05, 06  David Kastrup <dak@gnu.org>
+%% Copyright 2002, 03, 04, 05, 06, 08  David Kastrup <dak@gnu.org>
 %%
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{367}
+% \CheckSum{385}
 % \GetFileInfo{perpage.sty}
 % \date{\filedate}
 % \author{David Kastrup\thanks{\texttt{dak@gnu.org}}}
@@ -63,15 +63,15 @@
 % \begin{quote}
 %   |\renewcommand{\thefigure}{\thepage-\arabic{figure}}|
 % \end{quote}
-% you'll have the problem that \thepage is updated asynchronously with
-% the real page, since \TeX\ does not know which page the figure will
-% end up.  If you have used the |perpage| package for modifying the
-% figure counter, however, at the point where the counter is
-% incremented, the macro \cmd{\theperpage} will be set to the correct
-% value corresponding to the actual page location.  Note that this
-% macro is shared between all counters, so advancing a different
-% counter under control of |perpage| will render \cmd{\thefigure}
-% incorrect.
+% you'll have the problem that \cmd{\thepage} is updated
+% asynchronously with the real page, since \TeX\ does not know which
+% page the figure will end up.  If you have used the |perpage| package
+% for modifying the figure counter, however, at the point where the
+% counter is incremented, the macro \cmd{\theperpage} will be set to
+% the correct value corresponding to the actual page location.  Note
+% that this macro is shared between all counters, so advancing a
+% different counter under control of |perpage| will render
+% \cmd{\thefigure} incorrect.
 %
 % \DescribeMacro{\MakeSorted}
 % \begin{quote}
@@ -156,14 +156,14 @@
 %    \begin{macrocode}
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
-\def\next$#1: #2 #3${#2}
-\ProvidesPackage{perpage}[\next$Date: 2006/09/04 22:15:15 $
-  \next$Revision: 1.16 $ Reset/sort counters per page]
+\def\next$#1: #2-#3-#4 #5: #6 #7${#2/#3/#4 #6}
+\ProvidesPackage{perpage}[\next$Date: 2008-04-06 12:40:06 $
+  $Revision: 1.19 $ Reset/sort counters per page]
 %    \end{macrocode}
 % \begin{macro}{\AddAbsoluteCounter}
-% adds a counter with prefix |abs| to a given counter.  It typesets as
-% an arabic number and never gets reset.  And it is advanced with the
-% unprefixed counter.
+%   adds a counter with prefix |abs| to a given counter.  It typesets
+%   as an arabic number and never gets reset.  And it is advanced
+%   whenever the unprefixed counter gets advanced.
 %    \begin{macrocode}
 \newcommand\AddAbsoluteCounter[1]
 {\@ifundefined{c@abs#1}{%
@@ -478,6 +478,23 @@
     \global\expandafter\let\csname pp@page@#1\endcsname\next
     \expandafter\pp@labeldef\expandafter
       {\number\value{pp@a@#1}}{#1}{#2}{#3}{#4}}}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\@testdef}
+%   \LaTeX's current (2007) definition of this macro causes save stack
+%   overflow.  We fix this by an additional grouping.  Delay to the
+%   beginning of document to keep Babel happy.
+%   \begin{macrocode}
+\AtBeginDocument{%
+  \begingroup
+    \@testdef{}{undefined}{}%
+    \expandafter
+  \endgroup
+  \ifx\@undefined\relax
+    \let\pp@@testdef\@testdef
+    \def\@testdef#1#2#3{{\pp@@testdef{#1}{#2}{#3}%
+        \if@tempswa\aftergroup\@tempswatrue\fi}}%
+  \fi}
 %</style>
 %    \end{macrocode}
 % \end{macro}
