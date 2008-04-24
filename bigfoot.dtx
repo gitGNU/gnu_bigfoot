@@ -1,7 +1,7 @@
 % \iffalse
 %%
 %% bigfoot is part of the bigfoot bundle for critical typesetting
-%% Copyright 2004, 05, 06, 07  David Kastrup <dak@gnu.org>
+%% Copyright 2004, 05, 06, 07, 08  David Kastrup <dak@gnu.org>
 %%
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -2686,8 +2686,21 @@
 %   looped through while the splits are being optimized.  While
 %   recursing, \cmd{\FN@penalties} contains the accumulated penalities
 %   of the current split configuration: a penalty of $10000$ for any
-%   split (except the main list), plus the penalty at the split
-%   points.  \cmd{\FN@ebadness} is the same, but also counting in the
+%   split (except the main list), plus the penalty at the split points
+%   plus a `hangover' badness for the percentage of material carried
+%   over to the following pages.  If nothing is carried over, this
+%   is~0, if more is carried over, we get a penalty according to the
+%   proportion of carryover material, raised to the third power.
+% \begin{macro}{\footnotecarryratio}
+%   The fractional variable \cmd{\footnotecarryratio} is used for
+%   scaling the material before using the standard stretch badness
+%   calculations.  It should probably not exceed~4 since then
+%   saturation sets in.
+%    \begin{macrocode}
+\providecommand\footnotecarryratio{2}
+%    \end{macrocode}
+% \end{macro}
+%   \cmd{\FN@ebadness} is an augmented value, but also counting in the
 %   stretch badness for one particular configuration.  Ebadness does
 %   not make sense to evaluate more than temporarily: it is not passed
 %   through the levels.  Since \cmd{\FN@penalties} is globally
@@ -2697,7 +2710,8 @@
 %   space on the page, even though locally we use \cmd{\FN@myvsize}, a
 %   local value, to keep track of the locally reserved space.  The
 %   only time when we need to save \cmd{\FN@myvsize} should be when we
-%   temporarily leave boxes in order to save the current configuration.
+%   temporarily leave boxes in order to save the current
+%   configuration.
 %    \begin{macrocode}
 \def\FN@newlevel#1#2#3\FN@mainsplitreturn{%
   \count@\FN@cache#2%
@@ -3061,12 +3075,22 @@
 %   after a split.
 %    \begin{macrocode}
 \def\FN@checkcurrent{%
-  \skip@\glueexpr\FN@vsize-\FN@myvsize
-   *\count\FN@currentinsertion/\@m\relax
   \FN@getbreakpenalty
   \ifnum\FN@breakpenalty<-\@M
     \edef\FN@breakpenalty{\number-\@M}%
   \fi
+  \ifnum\FN@currentinsertion=\FN@savebox
+  \else
+    \ifdim\FN@specific\FN@currentinsertion\footnotecarryratio\p@>\z@
+      \skip@\FN@specific\FN@currentinsertion\footnotecarryratio
+        \dimexpr\ht\z@+\dp\z@\relax
+        \@plus-\dimexpr\FN@myvsize+\ht\z@+\dp\z@\relax
+      \FN@getbadness\skip@
+      \xdef\FN@penalties{\number\numexpr\FN@penalties+\badness}%
+    \fi
+  \fi
+  \skip@\glueexpr\FN@vsize-\FN@myvsize
+   *\count\FN@currentinsertion/\@m\relax
   \FN@getbadness\skip@
   \xdef\FN@penalties{\number\numexpr\FN@penalties+%
     \FN@breakpenalty+\@M}%
