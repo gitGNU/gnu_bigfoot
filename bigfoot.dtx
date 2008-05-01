@@ -1770,7 +1770,8 @@
 %    \end{macrocode}
 % \begin{macro}{\FN@removecheck}
 %   This returns |\@ne| if and only if the current slot master is strictly
-%   inside of the specified interval.
+%   inside of the specified open interval.  In this case it is not to
+%   appear on the current page.
 %    \begin{macrocode}
 \def\FN@removecheck#1#2{%
   \ifnum#1<\FN@slotget{\number\dp\z@} %
@@ -1998,6 +1999,7 @@
 % anyway.
 %    \begin{macrocode}
 \output{%
+  \let\@elt\relax
   \ifvoid\@cclv \PackageError{bigfoot}{Empty box 255 in \output}\fi
 %<trace> \if\foottrace8%
 %<trace>   \message{entering output with
@@ -2128,16 +2130,20 @@
 % Note that the pagediscards contain material corresponding to the
 % last breakpoint chosen, so they will either start with a penalty
 % of~10000 (which is what an actual outputpenalty gets replaced with)
-% or will start with discardable material.  When we are working with
-% multiple passes and have to suspect a replaced outputpenalty, we add
-% the original outputpenalty (or 0, if there was none) back to the
-% list (in which case it ends up in the pagediscards) or the savebox,
-% so we don't need to add it here.
+% or will start with discardable material.  We clean it for that
+% reason.
 %    \begin{macrocode}
         \unvbox\z@
         \global\setbox\@cclv\vbox{\break\unvbox\@cclv}%
-        {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}% 
-        \pagediscards
+        {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}
+        \ifnum\outputpenalty=\@M
+          \setbox\z@\vbox{\pagediscards
+            \FN@cleanpagepenalty}%
+          \unvbox\z@
+        \else
+          \penalty\outputpenalty
+          \pagediscards
+        \fi
         \unvbox\@cclv
         \boxmaxdepth\maxdepth}%
       \global\outputpenalty\FN@outputpenalty\relax
@@ -2180,6 +2186,7 @@
 %   respective boxes.  If the whole exercise has been 
 %    \begin{macrocode}
 \def\FN@normaloutput{%
+%<trace> \if\foottrace8\message{^^JEntering \string\FN@normaloutput:^^J}\fi
 %    \end{macrocode}
 % \cmd{\FN@vsize} is now being set to the vertical size taken up by
 % the insertions, according to \TeX.  Note that this does not include
@@ -2195,8 +2202,11 @@
 %    \begin{macrocode}
   \FN@nest@iterate\FN@sortinsert
   \FN@nest@iterate\FN@clearcache
-  \xdef\FN@config{\noexpand\@elt{\number0\botmarks\FN@slave}%
+  \xdef\FN@config{\@elt{\number0\botmarks\FN@slave}%
     {\number\maxdimen}}%
+%<trace> \if\foottrace8%
+%<trace>    \message{\noexpand\FN@normaloutput start config: \FN@config^^J}%
+%<trace> \fi
   \FN@nest@iterate\FN@reconfig
 %    \end{macrocode}
 % Note that \cmd{\FN@reconfig} subtracts the \emph{actual} size of all
@@ -2257,7 +2267,6 @@
 %    \begin{macrocode}
     \FN@restartoutput
     \penalty -13749
-    \penalty\ifnum\outputpenalty<\@M \outputpenalty\else\z@\fi
   \or
 %    \end{macrocode}
 % Case 2: Now we want to gather additional material.  This is somewhat
@@ -2322,8 +2331,7 @@
 % box of their own).  This may be void if there is no main text but
 % only footnotes.  If we have carryover material, we add the current
 % outputpenalty there and set outputpenalty to a value indicating that
-% we have no outputpenalty to add at the end of the current list
-% (Fixme: other places might interpret this as a zero penalty?).
+% we have no outputpenalty to add at the end of the current list.
 %    \begin{macrocode}
         \ifvoid\z@
           \ifvbox\FN@tempbox
@@ -2393,7 +2401,6 @@
       \global\advance\FN@outervsize-\vsize
       \global\deadcycles\z@
     \or
-      \count@\outputpenalty
 %<trace> \if\foottrace8%
 %<trace>   \message{^^JOutput: config is \FN@config...}\fi
       \setbox\tw@\vbox{%
@@ -2416,7 +2423,9 @@
       \penalty -13751
       \unvbox\z@
     \fi
-  \fi}
+  \fi
+%<trace> \if\foottrace8\message{^^JExiting \string\FN@normaloutput^^J}\fi
+}
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@prepareoutput}
@@ -2575,8 +2584,7 @@
         \count@\@M
         \FN@getbreakpenaltyii
         \xdef\FN@tempinfo{\edef\noexpand\FN@breakpenalty{%
-            \number\ifnum\count@<\@M \count@ \else
-            \FN@defaultpenalty\fi
+            \number\ifnum\count@=\@M \FN@defaultpenalty \else \count@\fi
           }}}}%
   \FN@tempinfo}
 
@@ -2596,6 +2604,48 @@
     \count@\lastpenalty
     \unpenalty \expandafter\FN@getbreakpenaltyii
   \fi}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@cleanpagepenalty}
+%   This is used for removing initial infinite penalties from the
+%   pagediscards: those are artifacts of the page break routine.
+%    \begin{macrocode}
+\def\FN@cleanpagepenalty{%
+  \ifcase
+    \ifnum\lastnodetype<\z@ \m@ne\fi
+    \ifnum\lastnodetype<11 \@ne\fi
+    \ifnum\lastnodetype>13 \@ne\fi
+    \numexpr\lastnodetype-9\relax
+  \or
+    \PackageError{bigfoot}{Illegal node type}{This can't happen}%
+  \or
+    \skip@=\lastskip \unskip
+    \expandafter \FN@cleanpagepenalty \expandafter\vskip\the
+    \expandafter\skip@
+  \or
+    \dimen@=\lastkern \unkern
+    \expandafter \FN@cleanpagepenalty \expandafter\kern\the
+    \expandafter\dimen@
+  \or
+    \count@\lastpenalty \unpenalty
+    \expandafter\FN@maybepenalty \the\expandafter\count@
+  \fi
+  \relax}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\FN@maybepenalty}
+%   The key point to note in this macro here is that the \cs{ifnum} is
+%   expanded before the \cmd{\FN@cleanpagepenalty} (when \cmd{\count@}
+%   is still valid), but the check for the empty node list is expanded
+%   afterwards.
+%    \begin{macrocode}
+\def\FN@maybepenalty{%
+  \expandafter\FN@cleanpagepenalty
+    \ifnum\count@=\@M \ifnum\lastnodetype<\z@
+      \count@
+    \else
+      \penalty
+    \fi \else \penalty \fi}
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@mainsplitreturn}
@@ -2661,7 +2711,9 @@
 %<trace>     returning with \the\FN@vsize^^J}%
 %<trace>   \message{Config=\unexpanded\expandafter{\FN@config}^^J}\fi
   \else
-%<trace> \if\foottrace1\message{Entering #2 with \FN@penalties}\fi
+%<trace> \if\foottrace1\message{Entering #2 with \FN@penalties,
+%<trace>   \FN@vsize=\the\FN@vsize,^^J%
+%<trace>   Config=\unexpanded\expandafter{\FN@config}^^J}\fi
     {\def\FN@currentinsertion{#2}%
      \def\FN@currentrecursion{#3}%
      \let\FN@entryconfig\FN@config
@@ -2673,7 +2725,9 @@
      \vfuzz\maxdimen
      \let\@elt\relax
      \expandafter\FN@newleveli\expandafter}%
-%<trace> \if\foottrace1\message{Exiting #2 with \FN@penalties}\fi
+%<trace> \if\foottrace1\message{Exiting #2 with \FN@penalties,
+%<trace>   \FN@vsize=\the\FN@vsize,^^J%
+%<trace>   Config=\unexpanded\expandafter{\FN@config}^^J}\fi
   \fi}
 %    \end{macrocode}
 % \end{macro}
@@ -2802,12 +2856,18 @@
 % split, we want to have all available page stretchability properly
 % taken into account.  So we take the box, and add the available page
 % stretchability at the top.  Note that the stretchability is
-% registered negatively.
+% registered negatively.  If we are on the main vertical list, an
+% empty page can be an acceptable option, so we add a penalty of zero
+% to account for that.  Note that any prospective true penalties will
+% already have disappeared into the page break.
 %    \begin{macrocode}
         \let\FN@splitcolors\@empty
         \setbox\z@\vbox{\vskip-\glueexpr(\FN@vsize-\dimexpr\FN@vsize
           \relax\@minus\glueshrink\FN@vsize)%
           *\@m/\count\FN@currentinsertion
+          \ifnum\FN@currentinsertion=\FN@savebox
+            \penalty\z@
+          \fi
           \unvbox\z@
           \ifnum\FN@defaultpenalty>-\@M
             \penalty\FN@defaultpenalty\relax\nointerlineskip
@@ -2844,28 +2904,11 @@
           \unvbox\tw@\boxmaxdepth\splitmaxdepth}%
 %    \end{macrocode}
 % Ok, now rinse and repeat if we haven't reached the last footnote
-% in the block.  Or, if we are in the main block and have not reached
-% the necessary minimum size.
+% in the block.
 %    \begin{macrocode}
         \ifnum\FN@currentinsertion=\FN@savebox
           \edef\FN@slaveid{\splitbotmarks\FN@slave}%
           \FN@contribute@tw@
-          \ifdim\FootnoteMainMinimum>\FN@myvsize
-            \loop
-              \setbox\tw@\vsplit\z@ to\z@
-              \edef\FN@slaveid{\splitbotmarks\FN@slave}%
-              \FN@contribute@tw@
-            \ifcase\ifdim\FootnoteMainMinimum>\FN@myvsize
-              \ifvoid\z@
-                \@ne
-              \else
-                \tw@
-              \fi\fi \z@
-            \or
-              \PackageWarning{bigfoot}{too little main material}%
-            \else
-            \repeat
-          \fi
         \else
           \ifnum0\splitbotmarks\FN@master=\FN@masterslot \else
             \loop
@@ -3033,8 +3076,17 @@
     \ifnum\badness=\@M
       \edef\FN@ebadness{\number\numexpr\maxdimen-\tw@}%
     \else
-      \edef\FN@ebadness{\number\numexpr
-        \FN@penalties+\badness}%
+      \ifcase
+        \ifnum\FN@currentinsertion=\FN@savebox
+          \ifdim\FootnoteMainMinimum>\FN@myvsize
+            \@ne
+          \fi
+        \fi \z@
+        \edef\FN@ebadness{\number\numexpr
+                          \FN@penalties+\badness}%
+      \or
+        \edef\FN@ebadness{\number\numexpr\maxdimen-\thr@@}%
+      \fi
     \fi
   \fi
   \dimen@\glueexpr\FN@bestvsize\relax
