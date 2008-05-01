@@ -808,6 +808,9 @@
 % \end{macro}
 %    \begin{macrocode}
 \def\@makefnstartbox{%
+  \ifdefined\setspace@singlespace
+    \def\baselinestretch{\setspace@singlespace}%
+  \fi
   \reset@font\footnotesize
   \hsize\MFL@columnwidth \@parboxrestore
   \interlinepenalty\FN@specific\FN@masterinsert\interfootnotelinepenalty
