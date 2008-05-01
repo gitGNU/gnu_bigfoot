@@ -2114,6 +2114,10 @@
 % adjusted by the accumulated contributions of insertions to the page
 % size.  Fiddling with it would not appear necessary or even prudent.
 %    \begin{macrocode}
+%<trace>\if\foottrace8
+%<trace>   \message{Box 255 before reglue
+%<trace>     (outputpenalty=\the\outputpenalty):}%
+%<trace>   {\showboxdepth4\showboxbreadth100\showbox\@cclv}\fi
       \global\setbox\@cclv\vbox{%
 %    \end{macrocode}
 % Now we might have had a \cmd{\topskip} value designed for requesting
@@ -2146,6 +2150,9 @@
         \fi
         \unvbox\@cclv
         \boxmaxdepth\maxdepth}%
+%<trace>\if\foottrace8
+%<trace>   \message{Box 255 reglued (outputpenalty=\FN@outputpenalty):}%
+%<trace>   {\showboxdepth4\showboxbreadth100\showbox\@cclv}\fi
       \global\outputpenalty\FN@outputpenalty\relax
 %    \end{macrocode}
 % Ok, now if \cmd{\topskip} is actually \emph{positive}, we have been
@@ -2422,6 +2429,10 @@
       \FN@restartoutput
       \penalty -13751
       \unvbox\z@
+      \ifnum\outputpenalty>\@M
+      \else \penalty
+            \ifnum\outputpenalty=\@M \z@ \else\outputpenalty\fi
+      \fi
     \fi
   \fi
 %<trace> \if\foottrace8\message{^^JExiting \string\FN@normaloutput^^J}\fi
@@ -2634,10 +2645,11 @@
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@maybepenalty}
-%   The key point to note in this macro here is that the \cs{ifnum} is
-%   expanded before the \cmd{\FN@cleanpagepenalty} (when \cmd{\count@}
-%   is still valid), but the check for the empty node list is expanded
-%   afterwards.
+%   The key point to note in this macro here is that the first
+%   \cs{ifnum} is expanded before \cmd{\FN@cleanpagepenalty} is
+%   executed (when \cmd{\count@} is still valid), but the potential
+%   check for the empty node list is expanded after further cleanup
+%   has been done to the top of the list.
 %    \begin{macrocode}
 \def\FN@maybepenalty{%
   \expandafter\FN@cleanpagepenalty
@@ -3098,7 +3110,11 @@
     \edef\FN@ebadness{\number\numexpr\maxdimen-\@ne}%
   \else
     \ifnum\badness=\@M
-      \edef\FN@ebadness{\number\numexpr\maxdimen-\tw@}%
+      \ifdim\skip@<\vsize
+        \edef\FN@ebadness{\number\numexpr\maxdimen-\tw@}%
+      \else
+        \edef\FN@ebadness{\number\numexpr\maxdimen}%
+      \fi
     \else
       \ifcase
         \ifnum\FN@currentinsertion=\FN@savebox
