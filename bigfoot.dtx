@@ -2033,7 +2033,8 @@
       \FN@sweeptopmarks
     \fi
     \FN@nest@iterate{\FN@insertouterspace\global\FN@outervsize
-      \dimexpr\ht\@cclv}%
+      \dimexpr\z@}%
+    \global\advance\FN@outervsize\ht\@cclv
     \global\setbox\@cclv\vbox{\unvbox\@cclv\boxmaxdepth\maxdepth}%
     \global\let\FN@vsadjustlist\@empty
 %    \end{macrocode}
@@ -2208,7 +2209,8 @@
 % size was taken from \cmd{\pagegoal}, and we reconstitute it in this
 % manner.
 %    \begin{macrocode}
-  \global\FN@vsize\dimexpr\FN@outervsize-\ht\@cclv\relax\relax
+  \global\FN@vsize\FN@outervsize
+  \global\advance\FN@vsize-\ht\@cclv\relax\relax
 %    \end{macrocode}
 % Now we sort the inserts and regenerate the cache.
 %    \begin{macrocode}
