@@ -2003,6 +2003,8 @@
 % are probably in big dodo with regard to page size accounting,
 % anyway.
 %    \begin{macrocode}
+\newcount\FN@outputflag
+\FN@outputflag=3158345
 \output{%
   \let\@elt\relax
   \ifvoid\@cclv \PackageError{bigfoot}{Empty box 255 in \output}\fi
@@ -2177,9 +2179,11 @@
         \hrule\@height\z@\@depth\z@
         \unvcopy\FN@topmarkbox
         \penalty-13750
+        \penalty\FN@outputflag
         \hrule\@height\z@\@depth\z@
         \FN@insertmarks
         \penalty-13749
+        \penalty\FN@outputflag
         \FN@prepareoutput
         \global\topskip-\maxdimen
         \global\vsize0.5\maxdimen
@@ -2281,6 +2285,7 @@
 %    \begin{macrocode}
     \FN@restartoutput
     \penalty -13749
+    \penalty \FN@outputflag
   \or
 %    \end{macrocode}
 % Case 2: Now we want to gather additional material.  This is somewhat
@@ -2350,6 +2355,8 @@
         \ifvoid\z@
           \ifvbox\FN@tempbox
             \ifnum\outputpenalty<\@M
+% The output penalty originally from below the split box gets appended
+% to the end of the split box.
               \global\setbox\FN@tempbox{\unvbox\FN@tempbox
                 \penalty\outputpenalty}%
             \fi
@@ -2357,9 +2364,11 @@
           \fi
         \else
 %    \end{macrocode}
-% Ok, we have material on this page.  We unpack it and fish out the
-% break penalty from the last box.  After checking it, put it in
-% box~0.
+% Ok, we have material to go to the next page.  We unpack it and fish
+% out the break penalty from the last box.  After checking it, put it in
+% box~0.  A prospective current break penalty gets appended to the
+% carryover material.  The fished-out break penalty becomes the new
+% value of outputpenalty.
 %    \begin{macrocode}
           \MFL@removevboxes
           \unvbox\z@
@@ -2435,6 +2444,7 @@
     \or
       \FN@restartoutput
       \penalty -13751
+      \penalty\FN@outputflag
       \unvbox\z@
       \ifnum\outputpenalty>\@M
       \else \penalty
@@ -2495,6 +2505,7 @@
   \hrule\@height\z@\@depth\z@
   \unvcopy\FN@topmarkbox
   \penalty -13750
+  \penalty\FN@outputflag
   \hrule\@height\z@\@depth\z@
   \FN@insertmarks
   \FN@prepareoutput
@@ -2646,25 +2657,14 @@
     \expandafter\dimen@
   \or
     \count@\lastpenalty \unpenalty
-    \expandafter\FN@maybepenalty \the\expandafter\count@
+    \ifnum\count@=\FN@outputflag
+      \unpenalty\expandafter\expandafter\expandafter\FN@cleanpagepenalty
+    \else
+      \expandafter\FN@cleanpagepenalty\expandafter
+      \penalty\the\expandafter\expandafter\expandafter\count@
+    \fi
   \fi
   \relax}
-%    \end{macrocode}
-% \end{macro}
-% \begin{macro}{\FN@maybepenalty}
-%   The key point to note in this macro here is that the first
-%   \cs{ifnum} is expanded before \cmd{\FN@cleanpagepenalty} is
-%   executed (when \cmd{\count@} is still valid), but the potential
-%   check for the empty node list is expanded after further cleanup
-%   has been done to the top of the list.
-%    \begin{macrocode}
-\def\FN@maybepenalty{%
-  \expandafter\FN@cleanpagepenalty
-    \ifnum\count@=\@M \ifnum\lastnodetype<\z@
-      \count@
-    \else
-      \penalty
-    \fi \else \penalty \fi}
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@mainsplitreturn}
