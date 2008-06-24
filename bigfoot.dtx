@@ -1750,7 +1750,7 @@
 
 \expandafter\expandafter\expandafter\let\FN@cache\FN@savebox=\@cclv
 
-\expandafter\def\csname FN@ht\number\FN@savebox\endcsname{\topskip}%
+\expandafter\def\csname FN@ht\number\FN@savebox\endcsname{\z@skip}%
 \expandafter\def\csname FN@dp\number\FN@savebox\endcsname{\maxdepth}
 \expandafter\def\csname FN@wd\number\FN@savebox\endcsname{\columnwidth}
 
@@ -2918,7 +2918,7 @@
         \relax
         \ifnum\FN@defaultpenalty>-\@M
           \setbox\z@\vbox\bgroup\unvbox\z@\setbox\z@\lastbox
-            \unpenalty
+            \unskip
             \ifnum\lastnodetype<\z@
               \egroup \setbox\z@\box\voidb@x
             \else
