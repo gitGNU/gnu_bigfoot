@@ -3117,9 +3117,18 @@
   \ifnum\FN@currentinsertion=\FN@savebox
   \else
     \ifdim\FN@specific\FN@currentinsertion\footnotecarryratio\p@>\z@
-      \skip@\FN@specific\FN@currentinsertion\footnotecarryratio
-        \dimexpr\ht\z@+\dp\z@\relax
-        \@plus-\dimexpr\FN@myvsize+\ht\z@+\dp\z@\relax
+      \skip@\FN@specific\FN@currentinsertion
+      \ifdim\footnotecarryratio\p@>\p@
+          \dimexpr\ht\z@+\dp\z@\relax
+          \@plus-\dimexpr((\FN@myvsize+\ht\z@+\dp\z@)
+                          *\p@/\dimexpr\footnotecarryratio\p@)\relax
+        \fi
+      \else
+        \footnotecarryratio
+          \dimexpr\ht\z@+\dp\z@\relax
+          \@plus-\dimexpr\FN@myvsize+\ht\z@+\dp\z@\relax
+        \fi
+      \relax
       \FN@getbadness\skip@
       \xdef\FN@penalties{\number\numexpr\FN@penalties+\badness}%
     \fi
