@@ -632,7 +632,7 @@
   \let\FN@afterbreak\@empty
 \fi
 %    \end{macrocode}
-% 
+%
 %
 %\subsubsection{The works}
 %
@@ -989,7 +989,7 @@
 %    \begin{macrocode}
 \def\FN@pseudobreak{%
   {\parskip\z@skip\parfillskip\z@skip\parindent\z@\vadjust{}\par\noindent
-    \vadjust{\nobreak\vskip-\baselineskip}\nobreak\hfill\break}}      
+    \vadjust{\nobreak\vskip-\baselineskip}\nobreak\hfill\break}}
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@pseudofillbreak}
@@ -997,7 +997,7 @@
 %    \begin{macrocode}
 \def\FN@pseudofillbreak{\nobreak\hskip\parfillskip\FN@pseudobreak}
 %    \end{macrocode}
-%   
+%
 % \end{macro}
 % \begin{macro}{\@makefnbreak}
 %   This calculates the glue for the standard horizontal footnotes.
@@ -1299,7 +1299,7 @@
     \aftergroup\FN@robustending
     \FN@makefnstart
     \let\next}
-%    \end{macrocode}  
+%    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@robustending}
 %   Here we put in the missing part of \cmd{\@makefntext}.
@@ -1319,9 +1319,9 @@
   \FN@specific\FN@masterinsert\@makefntext
   {\FN@makefnstart#1\FN@commonending}}
 %    \end{macrocode}
-%   
+%
 % \end{macro}
-% 
+%
 % Ok, color handling is a nuisance, to say the least.  Split
 % footnotes need to close their color stack on the old page, and reopen
 % it on the new one.  So we record the color stack state at each time
@@ -2308,7 +2308,7 @@
     \dimen@=\dimexpr\FN@vsize-\glueshrink\FN@vsize\relax
     \FN@prepareoutput
     \global\topskip \normalbaselineskip
-    \global\vsize \dimen@ 
+    \global\vsize \dimen@
     \global\advance\FN@outervsize-\vsize
     \global\deadcycles\z@
   \else
@@ -2389,7 +2389,7 @@
           \global\setbox\FN@tempbox\vbox\bgroup\unvbox\z@
             \unvbox\FN@tempbox
             \ifnum\lastnodetype<\z@
-            \egroup\global\setbox\FN@tempbox\box\voidb@x            
+            \egroup\global\setbox\FN@tempbox\box\voidb@x
             \else
               \ifnum\outputpenalty<\@M
                 \penalty\outputpenalty
@@ -2431,7 +2431,7 @@
       \FN@prepareoutput
       \global\topskip \normalbaselineskip
       \ifdim\dimen@<\normalbaselineskip \dimen@=2\baselineskip\fi
-      \global\vsize \dimen@ 
+      \global\vsize \dimen@
       \global\advance\FN@outervsize-\vsize
       \global\deadcycles\z@
     \or
@@ -2485,7 +2485,7 @@
 %   distance, we might have a problem here.  There is no obvious way
 %   to avoid it, though.
 %    \begin{macrocode}
-\def\FN@prepareoutput{%  
+\def\FN@prepareoutput{%
   {\let\@elt\FN@recordinsertparam
    \xdef\FN@vsadjustlist{%
      \global\vsize=\the\vsize
@@ -3013,7 +3013,7 @@
       \dimexpr\FN@myvsize*\count\FN@currentinsertion/\@m \relax\relax}
 %    \end{macrocode}
 % \end{macro}
-% 
+%
 % \subsubsection{Main label for reconsideration}
 % When we are here, then there is not yet a split in the next footnote
 % blocks scheduled.  We might have to restitch stuff together here,
@@ -3184,7 +3184,7 @@
       \ifdim\dimen@<\skip@ \@ne \fi \tw@
     \fi
     \ifdim\dimen@>\skip@ \@ne\fi \tw@}
-%    \end{macrocode}   
+%    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\FN@mayberecordbest}
 %   This checks whether the current configuration is better than a
@@ -3332,7 +3332,7 @@
 }
 %    \end{macrocode}
 % \end{macro}
-% 
+%
 % \begin{macro}{\FN@contribute@tw@}
 %   This will go from the state where we have the previous
 %   \cmd{\splitdiscards} struttified on the current list some material
@@ -3482,7 +3482,7 @@
   \fi}}
 %    \end{macrocode}
 % \end{macro}
-% 
+%
 % \begin{macro}{\FN@retainkept}
 %  This relies on \cmd{\@elt} being set to \cmd{\FN@removecheck} which
 %  expands to \cmd{\@ne} if |\box0| is strictly between the two values
