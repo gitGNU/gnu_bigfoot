@@ -166,8 +166,8 @@
 \DeclareOption{ruled}{\PassOptionsToPackage{ruled}{manyfoot}}
 %    \end{macrocode}
 % The normal processing makes footnote text macros allow verbatim and
-% similar.  We call this `robust' processing though it is not totally
-% accurate.  This is the default.  There is also an option `fragile'
+% similar.  We call this |robust| processing though it is not totally
+% accurate.  This is the default.  There is also an option |fragile|
 % which will not allow this, but may be required for some definitions
 % of \cmd{\@makefntext}.  It turns out that most document classes work
 % with the `robust' option, but there might be some that fail, and
@@ -357,7 +357,7 @@
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\MFL@removevboxes}
-%   The trick is like with \cmd{\removehboxes} in the \TeX book's
+%   This trick works like \cmd{\removehboxes} in the \TeX book's
 %   appendix~D.
 %    \begin{macrocode}
 \def\MFL@removevboxes{{\setbox\z@\lastbox
@@ -834,8 +834,7 @@
 %   already set horizontal material.  It uses \cmd{\@makefnstartbox}
 %   for setting up the initial widow/club penalties, and
 %   \cmd{\@makefnendbox} for preparing the final end.  It results in a
-%   vbox, but its argument, a stream of horizontal and vertical
-%   material, is typeset in
+%   vbox.
 %    \begin{macrocode}
 \ifx\@makefnvbox\@undefined
   \def\@makefnvbox#1{\vbox{%
@@ -2208,7 +2207,7 @@
 %   Now we have recovered a sensible state and glued everything together
 %   that has been necessary.  All insertion parameters are at their
 %   standard values, and any insertions have been collected in the
-%   respective boxes.  If the whole exercise has been 
+%   respective boxes.
 %    \begin{macrocode}
 \def\FN@normaloutput{%
 %<trace> \if\foottrace8\message{^^JEntering \string\FN@normaloutput:^^J}\fi
