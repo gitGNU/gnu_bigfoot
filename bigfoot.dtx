@@ -1899,7 +1899,10 @@
 %   a complicated expression if you want to, for example by checking
 %   the presence of particular footnotes.
 %    \begin{macrocode}
+\def\FootnoteMinimum{1sp}
 \def\FootnoteMainMinimum{0pt}
+\expandafter\def\csname\string\FootnoteMinimum\number\FN@savebox
+\endcsname{\FootnoteMainMinimum}
 %    \end{macrocode}
 % \end{macro}
 %
@@ -2898,9 +2901,7 @@
         \setbox\z@\vbox{\vskip-\glueexpr(\FN@vsize-\dimexpr\FN@vsize
           \relax\@minus\glueshrink\FN@vsize)%
           *\@m/\count\FN@currentinsertion
-          \ifnum\FN@currentinsertion=\FN@savebox
-            \penalty\z@
-          \fi
+          \penalty\z@
           \unvbox\z@
           \ifnum\FN@defaultpenalty>-\@M
             \penalty\FN@defaultpenalty\relax\nointerlineskip
@@ -3125,17 +3126,12 @@
         \edef\FN@ebadness{\number\numexpr\maxdimen}%
       \fi
     \else
-      \ifcase
-        \ifnum\FN@currentinsertion=\FN@savebox
-          \ifdim\FootnoteMainMinimum>\FN@myvsize
-            \@ne
-          \fi
-        \fi \z@
-        \edef\FN@ebadness{\number\numexpr
-                          \FN@penalties+\badness}%
-      \or
-        \edef\FN@ebadness{\number\numexpr\maxdimen-\thr@@}%
-      \fi
+      \edef\FN@ebadness{\number\numexpr
+        \FN@penalties+\badness
+        \ifdim\FN@specific\FN@currentinsertion\FootnoteMinimum>\FN@myvsize
+          1000000
+        \fi
+        }%
     \fi
   \fi
   \dimen@\glueexpr\FN@bestvsize\relax
