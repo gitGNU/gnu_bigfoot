@@ -2108,6 +2108,10 @@
         \FN@normaloutput
       \else
         \the\FN@output
+        \@pageht-\vsize
+        \let\@currbox\footins
+        \@reinserts
+        \global\vsize-\@pageht
       \fi
     \else
       \dimen@\topskip
@@ -2279,6 +2283,10 @@
       \global\setbox\@cclv\vbox
       spread\FN@vsize{\unvbox\@cclv\boxmaxdepth\maxdepth}}%
     \the\FN@output
+    \let\@currbox\footins
+    \@pageht-\vsize
+    \@reinserts
+    \global\vsize-\@pageht
     \FN@nest@iterate\FN@clearcache
   \or
 %    \end{macrocode}
@@ -2444,6 +2452,10 @@
       }%
       \unvbox\tw@
       \unvbox\z@
+      \let\@currbox\footins
+      \@pageht-\vsize
+      \@reinserts
+      \global\vsize-\@pageht
       \FN@nest@iterate\FN@clearcache
     \or
       \FN@restartoutput
