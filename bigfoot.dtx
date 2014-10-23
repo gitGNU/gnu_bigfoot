@@ -316,12 +316,13 @@
   }%
 }
 
-\def\MFL@minipage{%
-  \ifinner\else
-    \let\MFL@mpinsertsave\MFL@insert
-    \MFL@reinsert \let\MFL@insert\MFL@mpinsert
-  \fi
-}
+\def\FN@divert{%
+  \let\MFL@mpinsertsave\MFL@insert
+  \MFL@reinsert \let\MFL@insert\MFL@mpinsert}
+\def\FN@enddivert{{\let\@elt\MFL@mpreinsert \MFL@list}}
+
+\def\MFL@minipage{\ifinner\else \FN@divert\fi}
+\def\MFL@endminipage{\ifinner\else \FN@enddivert\fi}
 %    \end{macrocode}
 % \end{macro}
 % \end{macro}
@@ -1174,7 +1175,7 @@
 %   insertion level.
 %    \begin{macrocode}
   \ifnum#2<\FN@masterinsert
-    \FN@colorstackbgroup\MFL@minipage
+    \FN@colorstackbgroup\FN@divert
     \FN@newslot\FN@masterslot
     \count@\FN@id
 %    \end{macrocode}
@@ -1429,7 +1430,7 @@
     \edef\FN@next{\kern\the\lastkern\relax}\unkern
   \fi
   \marks\FN@slave{\number\FN@id}%
-  \expandafter\MFL@endminipage\expandafter\FN@colorstackegroup
+  \expandafter\FN@enddivert\expandafter\FN@colorstackegroup
   \FN@next
 }
 %    \end{macrocode}
