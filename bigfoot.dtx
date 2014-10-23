@@ -17,7 +17,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{4519}
+% \CheckSum{4579}
 % \GetFileInfo{bigfoot.sty}
 % \title{The \texttt{bigfoot} package\\version \fileversion}
 % \date{\filedate}
@@ -2727,9 +2727,18 @@
 %   proportion of carryover material, raised to the third power.
 % \begin{macro}{\footnotecarryratio}
 %   The fractional variable \cmd{\footnotecarryratio} is used for
-%   scaling the material before using the standard stretch badness
-%   calculations.  It should probably not exceed~4 since then
-%   saturation sets in.
+%   scaling the leftover material dimensions.  After scaling with
+%   \cmd{\footnotecarryratio}, the carried material is treated like
+%   missing material in a glue calculation, while the stretchability
+%   for this calculation is given by the total size of material before
+%   breaking.  So with a setting of~1, there should always be enough
+%   stretchability, causing at most a penalty of~100.  That's not very
+%   effective, so we scale this up.
+%
+%   The default value of~2 seems to provide a reasonable penalty for
+%   leftover material.  The actual purpose for this component of the
+%   scoring is to penalize footnote blocks that seem to carry over
+%   disproportionally much material to later pages.
 %    \begin{macrocode}
 \providecommand\footnotecarryratio{2}
 %    \end{macrocode}
