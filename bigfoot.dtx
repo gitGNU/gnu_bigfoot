@@ -3537,20 +3537,17 @@
   \csname MFL@start#1\endcsname{#2}\fi#3}
 \@onlypreamble\FN@maybestart
 \AtBeginDocument{\@ifundefined{footinsdefault}%
-  {\DeclareNewFootnote[plain]{default}%
+  {\newfootnote[plain]{default}%
     {\let\@elt\FN@maybestart
-      \MFL@list\relax}}{}%
-  \let\c@footnote\c@footnotedefault
-  \let\thefootnote\thefootnotedefault
-  \def\thefootnotedefault{\thefootnote}%
-}
+      \MFL@list\relax}
+  }{}%
 %    \end{macrocode}
 % And since LaTeX's macros are inferior to our own (and would probably
 % not match too well), we reroot them to the default footnote style.
 %    \begin{macrocode}
-\def\footnote{\footnotedefault}
-\def\footnotemark{\footnotemarkdefault}
-\def\footnotetext{\footnotetextdefault}
+  \def\@footnotetext{\Footnotetextdefault{}}
+  \def\p@footnotedefault{\p@footnote}
+}
 %</style>
 %    \end{macrocode}
 %
