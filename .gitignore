@@ -5,3 +5,6 @@
 *.log
 *.aux
 *.out
+*.drv
+*.sty
+*.gz
