@@ -3,6 +3,9 @@
 %% bigfoot is part of the bigfoot bundle for critical typesetting
 %% Copyright 2004--2014  David Kastrup <dak@gnu.org>
 %%
+%% The license notice and corresponding source code for this file are
+%% contained in bigfoot.dtx.
+%%
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
 % the Free Software Foundation; either version 2 of the License, or
@@ -17,7 +20,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{4575}
+% \CheckSum{4576}
 % \GetFileInfo{bigfoot.sty}
 % \title{The \texttt{bigfoot} package\\version \fileversion}
 % \date{\filedate}
@@ -3577,7 +3580,7 @@
 % is supposed to cater for the installation itself.
 %    \begin{macrocode}
 %<installer> \input docstrip
-%<installer&make> \askforoverwritefalse
+%<installer&make> \askforoverwritefalse \nopreamble
 %<installer> \generate{
 %<installer>    \file{bigfoot.drv}{\from{bigfoot.dtx}{driver}}
 %<installer>    \file{perpage.drv}{\from{perpage.dtx}{driver}}

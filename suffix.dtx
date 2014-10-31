@@ -1,7 +1,10 @@
 % \iffalse
 %%
-%% perpage is part of the bigfoot bundle for critical typesetting
-%% Copyright 2002, 03, 04, 05, 06  David Kastrup <dak@gnu.org>
+%% suffix is part of the bigfoot bundle for critical typesetting
+%% Copyright 2002--2006  David Kastrup <dak@gnu.org>
+%%
+%% The license notice and corresponding source code for this file are
+%% contained in suffix.dtx.
 %%
 % This program is free software; you can redistribute it and/or modify
 % it under the terms of the GNU General Public License as published by
@@ -17,7 +20,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{206}
+% \CheckSum{198}
 % \GetFileInfo{suffix.sty}
 % \author{David Kastrup\thanks{\href{mailto:dak@gnu.org}
 %   {Email: \texttt{dak@gnu.org}}}}
@@ -96,11 +99,7 @@
 % First we announce the package and check for e\TeX~2.
 %   \begin{macrocode}
 %<*style>
-\def\next$#1: #2 #3${#2}
-\edef\next{\noexpand
-  \ProvidesPackage{suffix}[\next$Date: 2006/07/15 21:24:56 $
-  \next$Revision: 1.5 $ Variant command support]}
-\next
+\ProvidesPackage{suffix}[2006/07/15 1.5a Variant command support]
 \ifcase\ifx\eTeXversion\@undefined \@ne\fi
   \ifnum\eTeXversion<\tw@ \@ne\fi\z@
 \else
