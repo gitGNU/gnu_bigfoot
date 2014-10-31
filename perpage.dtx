@@ -17,7 +17,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{382}
+% \CheckSum{396}
 % \GetFileInfo{perpage.sty}
 % \date{\filedate}
 % \author{David Kastrup\thanks{\texttt{dak@gnu.org}}}
@@ -158,6 +158,48 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{perpage}[2014/10/25 2.0 Reset/sort counters per page]
 %    \end{macrocode}
+% \begin{macro}{\pp@cl@begin}
+% \begin{macro}{\pp@cl@end}
+%   These macros are considerable tricky.  They are called as
+%   artificial `dependent' counters when the counter they are hooked
+%   into is advanced.  The way in which those counters are called are
+%   one of the following:
+%   \begin{quote}
+% \begin{verbatim}
+% \def\@stpelt#1{\global\csname c@#1\endcsname \z@}
+% \end{verbatim}
+%   \end{quote}
+%   which is the default way of resetting a subordinate counter used
+%   in \LaTeX, or
+%   \begin{quote}
+% \begin{verbatim}
+% \def\@stpelt#1{\global\csname c@#1\endcsname \m@ne\stepcounter{#1}}
+% \end{verbatim}
+%   \end{quote}
+%   which is a little present from |fixltx2e.sty| as of 2014/05/01,
+%   quite complicating this feat.
+%
+%   The startup code swallows either |\global \advance| or |\global|.
+%    \begin{macrocode}
+\def\pp@cl@begin{\z@\z@ \begingroup}
+%    \end{macrocode}
+%   The command used for ending our fake counters checks for the
+%   |\m@ne| condition.   We don't want to bump our auxiliary counters
+%   twice, so we remove the following |\stepcounter| command.  Things
+%   will go haywire if there is none, of course.
+%    \begin{macrocode}
+\def\pp@cl@end{\afterassignment\pp@cl@end@ii \count@}
+\def\pp@cl@end@ii{%
+  \relax
+  \expandafter\endgroup
+  \ifnum\count@<\z@
+    \expandafter\pp@cl@end@iii
+  \fi}
+\def\pp@cl@end@iii\stepcounter#1{}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+%
 % \begin{macro}{\AddAbsoluteCounter}
 %   adds a counter with prefix |abs| to a given counter.  It typesets
 %   as an arabic number and never gets reset.  And it is advanced
@@ -170,9 +212,9 @@
     \global\expandafter\let\csname cl@abs#1\endcsname\@empty
     \expandafter\xdef\csname theabs#1\endcsname{%
       \noexpand\number \csname c@abs#1\endcsname}%
-    \global\@namedef{c@pabs@#1}{\z@=\z@{%
-        \stepcounter{abs#1}%
-        \afterassignment}\count@}%
+    \global\@namedef{c@pabs@#1}{\pp@cl@begin
+      \stepcounter{abs#1}%
+      \pp@cl@end}%
     \@addtoreset{pabs@#1}{#1}}{}}
 %    \end{macrocode}
 % \end{macro}
@@ -351,8 +393,7 @@
 %   generic command.  That is the reason we start off this command by
 %   giving \cmd{\global} something to chew on.
 %    \begin{macrocode}
-\def\c@pchk@#1{\z@=\z@
-  \begingroup
+\def\c@pchk@#1{\pp@cl@begin
 %    \end{macrocode}
 %   Now we fetch the page value corresponding to the not yet adjusted
 %   value of the absolute counter to see whether the previous counter
@@ -390,7 +431,7 @@
   \ifdim\dimen@=\z@
     \penalty \ifnum\count@<\@M \@M \else \count@ \fi
   \else \kern\dimen@\fi
-  \afterassignment\endgroup\count@}
+  \pp@cl@end}
 %    \end{macrocode}
 % \end{macro}
 % \begin{macro}{\pp@labeldef}
@@ -421,8 +462,7 @@
 %   get reset, too, so that the check for changed |.aux| files will
 %   still work.
 %    \begin{macrocode}
-\def\c@schk@#1{\z@=\z@
-  \begingroup
+\def\c@schk@#1{\pp@cl@begin
   \addtocounter{pp@a@#1}\@ne
   \ifnum\value{#1}=\@ne
     \expandafter\xdef\csname pp@g@#1\endcsname{\number\value{pp@a@#1}}%
@@ -455,8 +495,7 @@
 %   and it would be hard to decide what to do in case count groups and
 %   page positions overlap.
 %    \begin{macrocode}
-\def\c@spchk@#1{\z@=\z@
-  \begingroup
+\def\c@spchk@#1{\pp@cl@begin
   \addtocounter{pp@a@#1}\@ne
   \pp@fetchctr{#1}%
   \ifx\pp@page\@empty
