@@ -1,7 +1,7 @@
 TEX=tex
 PDFLATEX=pdflatex
 DTX=bigfoot.dtx suffix.dtx perpage.dtx
-DIST=$(DTX) Makefile bigfoot.ins README
+DIST=README COPYING $(DTX) Makefile bigfoot.ins
 
 all: $(DIST) $(DTX:.dtx=.sty) $(DTX:.dtx=.drv) $(DTX:.dtx=.pdf)
 
