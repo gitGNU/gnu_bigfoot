@@ -2,8 +2,9 @@ TEX=tex
 PDFLATEX=pdflatex
 DTX=bigfoot.dtx suffix.dtx perpage.dtx
 DIST=README COPYING $(DTX) Makefile bigfoot.ins
+DOC=$(DTX:.dtx=.pdf)
 
-all: $(DIST) $(DTX:.dtx=.sty) $(DTX:.dtx=.drv) $(DTX:.dtx=.pdf)
+all: $(DIST) $(DTX:.dtx=.sty) $(DOC)
 
 bigfoot-mk.ins: bigfoot.dtx Makefile
 	$(TEX) '\nonstopmode \def\jobname{.ins}\input docstrip ' \
@@ -43,3 +44,6 @@ suffix.pdf: suffix.dtx suffix.drv
 
 bigfoot.tar.gz: $(DIST)
 	tar czf $@ $(DIST)
+
+bigfoot-ctan.tar.gz: $(DIST) $(DOC)
+	tar czf $@ --transform 's,^\(\./\)\?,bigfoot/,' $(DIST) $(DOC)
