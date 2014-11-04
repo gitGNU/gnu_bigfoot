@@ -2155,7 +2155,7 @@
 %    \begin{macrocode}
         \unvbox\z@
         \global\setbox\@cclv\vbox{\break\unvbox\@cclv}%
-        {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}
+        {\splittopskip-\maxdimen \setbox\z@\vsplit\@cclv to\z@}%
         \ifnum\outputpenalty=\@M
           \setbox\z@\vbox{\pagediscards
             \FN@cleanpagepenalty}%
@@ -3559,14 +3559,14 @@
 \AtBeginDocument{\@ifundefined{footinsdefault}%
   {\newfootnote[plain]{default}%
     {\let\@elt\FN@maybestart
-      \MFL@list\relax}
+      \MFL@list\relax}%
   }{}%
 %    \end{macrocode}
 % And since LaTeX's macros are inferior to our own (and would probably
 % not match too well), we reroot them to the default footnote style.
 %    \begin{macrocode}
-  \def\@footnotetext{\Footnotetextdefault{}}
-  \def\p@footnotedefault{\p@footnote}
+  \def\@footnotetext{\Footnotetextdefault{}}%
+  \def\p@footnotedefault{\p@footnote}%
 }
 %</style>
 %    \end{macrocode}
