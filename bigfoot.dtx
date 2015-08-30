@@ -1,7 +1,7 @@
 % \iffalse
 %%
 %% bigfoot is part of the bigfoot bundle for critical typesetting
-%% Copyright 2004--2014  David Kastrup <dak@gnu.org>
+%% Copyright 2004--2015  David Kastrup <dak@gnu.org>
 %%
 %% The license notice and corresponding source code for this file are
 %% contained in bigfoot.dtx.
@@ -20,7 +20,7 @@
 % along with this program; if not, write to the Free Software
 % Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 % \fi
-% \CheckSum{4576}
+% \CheckSum{4580}
 % \GetFileInfo{bigfoot.sty}
 % \title{The \texttt{bigfoot} package\\version \fileversion}
 % \date{\filedate}
@@ -151,7 +151,7 @@
 %    \begin{macrocode}
 %<*style>
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{bigfoot}[2014/10/23 2.0 makes footnotes work]
+\ProvidesPackage{bigfoot}[2015/08/30 2.1 makes footnotes work]
 
 \DeclareOption{para}{\PackageInfo{bigfoot}{Compatibility option `para'
   has no effect:^^J%
@@ -253,12 +253,17 @@
 %   sense than what would happen otherwise.
 % \item We allocate quite a few registers, and the danger of running
 %   out of them is smaller when the extra registers of \eTeX\ are
-%   taken into account.
+%   taken into account.  Now unfortunately the LaTeX team has decided
+%   in 2015 to do its own extended allocation scheme incompatible with
+%   the |etex| package, so we need to guard against this load in case
+%   the new LaTeX allocation scheme is detected.
 % \end{enumerate}
 % We need the |manyfoot| package to build on.  The |suffix| and
 % |perpage| package are needed for some small stuff.
 %    \begin{macrocode}
+\ifx\e@alloc\@undefined
 \RequirePackage{etex}
+\fi
 \RequirePackage{manyfoot}
 \RequirePackage{suffix}
 \RequirePackage{perpage}
